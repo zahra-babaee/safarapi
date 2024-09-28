@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\v1;
 
+use App\Models\Image;
 use Illuminate\Routing\Controller;
 use App\Models\Otp;
 use App\Models\User;
@@ -29,19 +30,22 @@ class AuthController extends Controller
         if($validator->fails()){
             return response()->json($validator->errors()->toJson(), 400);
         }
-//        $this->validate($request,[
-//            'phone' => 'required|regex:/^09[0-9]{9}$/|digits:11',
-//        ]);
+
         //بررسی آخرین درخواست کد یکبار مصرف
         $lastOtp = Otp::query()->where('phone', $request->phone)->orderBy('created_at', 'desc')->first();
         // اگر از ارسال آخرین کد کمتر از 2 دقیقه گذشته باشد نمیتواند مجدد درخواست کد بدهد
-        if ($lastOtp && $lastOtp->created_at >= now()->subMinutes(2)) {
-            return response()->json([
-                'message' => 'لطفاً قبل از درخواست جدید دو دقیقه صبر کنید.',
-                'has_account' => false
-            ], 429);
-        }
+        if ($lastOtp) {
+            $remainingTime = Otp::remainingTime($request->phone, 2); // محاسبه زمان باقی‌مانده
 
+            // اگر از ارسال آخرین کد کمتر از 2 دقیقه گذشته باشد
+            if ($remainingTime > 0) {
+                return response()->json([
+                    'message' => 'لطفاً قبل از درخواست جدید دو دقیقه صبر کنید.',
+                    'remaining_time' => $remainingTime, // زمان باقی‌مانده را به پاسخ اضافه کنید
+                    'has_account' => false
+                ], 429);
+            }
+        }
         $user = User::query()->where('phone', $request->phone)->first();
 
         if ($user) {
@@ -65,6 +69,7 @@ class AuthController extends Controller
                 return response()->json([
                     'message' => 'کد یکبار مصرف برای ورود شما ارسال شد.',
                     'has_account' => true,
+                    'otp_ttl' => 120, // 120 ثانیه (یا زمان معتبر بودن کد)
                 ]);
             }
         } else {
@@ -73,6 +78,7 @@ class AuthController extends Controller
             Otp::query()->create([
                 'phone' => $request->phone,
                 'otp' => $otp,
+                'type' => 'register',
             ]);
             // ارسال OTP به شماره تلفن
             $this->sendOtp($request->phone, $otp); // متدی برای ارسال OTP
@@ -80,6 +86,7 @@ class AuthController extends Controller
             return response()->json([
                 'message' => 'این کاربر وجود ندارد - کد یکبار مصرف برای ثبت نام ارسال شد',
                 'has_account' => false,
+                'otp_ttl' => 120, // زمان معتبر بودن کد
             ]);
         }
     }
@@ -208,18 +215,35 @@ class AuthController extends Controller
         if (!$user) {
             return response()->json(['message' => 'کاربر با این شماره تلفن وجود ندارد.'], 404);
         }
+        else{
+            $lastOtp = Otp::query()->where('phone', $request->phone)->orderBy('created_at', 'desc')->first();
 
-        // ایجاد کد OTP و ذخیره آن
-        $otp = rand(1000, 9999);
-        Otp::query()->create([
-            'phone' => $request->phone,
-            'otp' => $otp,
-        ]);
+            if ($lastOtp) {
+                $remainingTime = Otp::remainingTime($request->phone, 2); // محاسبه زمان باقی‌مانده
 
-        // ارسال OTP به شماره تلفن کاربر
-        $this->sendOtp($request->phone, $otp); // متدی برای ارسال OTP
+                if ($remainingTime > 0) {
+                    return response()->json([
+                        'message' => 'لطفاً قبل از درخواست جدید دو دقیقه صبر کنید.',
+                        'remaining_time' => $remainingTime, // زمان باقی‌مانده را اضافه کنید
+                    ], 429);
+                }
+        }
+            // ایجاد کد OTP و ذخیره آن
+            $otp = rand(1000, 9999);
+            Otp::query()->create([
+                'phone' => $request->phone,
+                'otp' => $otp,
+                'type' => 'forget',
+            ]);
 
-        return response()->json(['message' => 'کد یکبار مصرف برای بازنشانی رمز عبور ارسال شد.']);
+            // ارسال OTP به شماره تلفن کاربر
+            $this->sendOtp($request->phone, $otp); // متدی برای ارسال OTP
+
+            return response()->json([
+                'message' => 'کد یکبار مصرف برای بازنشانی رمز عبور ارسال شد.',
+                'otp_ttl' => 120, // زمان معتبر بودن کد
+            ]);
+        }
     }
 
 
