@@ -41,35 +41,20 @@ class AuthController extends Controller
 //            ], 429);
 //        }
         $lastOtp = Otp::query()->where('phone', $request->phone)->orderBy('created_at', 'desc')->first();
+// اگر از ارسال آخرین کد کمتر از 2 دقیقه گذشته باشد، زمان باقی‌مانده را محاسبه کنید
+        if ($lastOtp && $lastOtp->created_at >= now()->subMinutes(2)) {
+            // محاسبه زمان باقی‌مانده تا مجاز بودن درخواست جدید
+            $remainingSeconds = $lastOtp->created_at->addMinutes(2)->diffInSeconds(now());
 
-        if ($lastOtp) {
-            // چاپ مقادیر برای دیباگ
-            $now = now();
-            $otpCreationTime = $lastOtp->created_at;
-            $twoMinutesLater = $otpCreationTime->copy()->addMinutes(2);
+            // اطمینان از اینکه مقدار به صورت صحیح برگردانده شود
+            $remainingSeconds = max(0, round($remainingSeconds)); // گرد کردن به عدد صحیح و جلوگیری از منفی شدن
 
-            // محاسبه زمان باقی‌مانده
-            $remainingSeconds = $twoMinutesLater->diffInSeconds($now, false); // 'false' برای مقادیر منفی
-
-            // چاپ برای دیباگ
-            \Log::info('Now: ' . $now);
-            \Log::info('OTP Creation Time: ' . $otpCreationTime);
-            \Log::info('Two Minutes Later: ' . $twoMinutesLater);
-            \Log::info('Remaining Seconds: ' . $remainingSeconds);
-
-            // اطمینان از اینکه مقدار منفی نباشد
-            $remainingSeconds = max(0, round($remainingSeconds));
-
-            // اگر زمان باقی‌مانده وجود دارد
-            if ($remainingSeconds > 0) {
-                return response()->json([
-                    'message' => 'لطفاً قبل از درخواست جدید دو دقیقه صبر کنید.',
-                    'otp_ttl' => $remainingSeconds,
-                    'has_account' => false
-                ], 429);
-            }
+            return response()->json([
+                'message' => 'لطفاً قبل از درخواست جدید دو دقیقه صبر کنید.',
+                'otp_ttl' => $remainingSeconds, // مقدار صحیح به عنوان TTL
+                'has_account' => false
+            ], 429);
         }
-
         $user = User::query()->where('phone', $request->phone)->first();
 
         if ($user) {
