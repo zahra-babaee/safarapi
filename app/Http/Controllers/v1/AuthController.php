@@ -41,13 +41,15 @@ class AuthController extends Controller
 //            ], 429);
 //        }
         $lastOtp = Otp::query()->where('phone', $request->phone)->orderBy('created_at', 'desc')->first();
+
 // اگر از ارسال آخرین کد کمتر از 2 دقیقه گذشته باشد، زمان باقی‌مانده را محاسبه کنید
         if ($lastOtp && $lastOtp->created_at >= now()->subMinutes(2)) {
             // محاسبه زمان باقی‌مانده تا مجاز بودن درخواست جدید
             $remainingSeconds = $lastOtp->created_at->addMinutes(2)->diffInSeconds(now());
+
             return response()->json([
                 'message' => 'لطفاً قبل از درخواست جدید دو دقیقه صبر کنید.',
-                'remaining_time' => $remainingSeconds,
+                'otp_ttl' => $remainingSeconds, // مقدار صحیح به عنوان TTL
                 'has_account' => false
             ], 429);
         }
