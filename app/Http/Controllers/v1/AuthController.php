@@ -52,9 +52,19 @@ class AuthController extends Controller
             // کاربر وجود دارد: بررسی وجود رمز عبور
             if ($user->has_password) {
                 return response()->json([
+//                    'status' => 200,
+//                    'data'=> [
+//                        'phone'=>$request->phone,
+//                        'has_account' => true,
+//                        'has_password' => true,
+//                        'message' => 'این کاربر وجود دارد. می‌توانید با رمز عبور هم وارد شوید.',
+//                        'login_method' =>'password',
+//                        'otp_ttl' => 120, // 120 ثانیه (یا زمان معتبر بودن کد)
+//                    ],
+                    'phone'=>$request->phone,
                     'message' => 'این کاربر وجود دارد. می‌توانید با رمز عبور هم وارد شوید.',
                     'has_account' => true,
-                    'user_has_password' => true,
+                    'has_password' => true,
                 ]);
             } else {
                 // کاربر وجود دارد ولی رمز عبور ندارد: ارسال کد OTP
@@ -67,9 +77,15 @@ class AuthController extends Controller
                 $this->sendOtp($request->phone, $otp); // متدی برای ارسال OTP
 
                 return response()->json([
-                    'message' => 'کد یکبار مصرف برای ورود شما ارسال شد.',
-                    'has_account' => true,
-                    'otp_ttl' => 120, // 120 ثانیه (یا زمان معتبر بودن کد)
+                    'status' => 200,
+                    'data'=> [
+                        'phone'=>$request->phone,
+                        'has_account' => true,
+                        'has_password' =>false,
+                        'massage' => 'کدیکبار مصرف ارسال شد.',
+                        'login_method' =>'otp',
+                        'otp_ttl' => 120, // 120 ثانیه (یا زمان معتبر بودن کد)
+                    ],
                 ]);
             }
         } else {
@@ -84,9 +100,18 @@ class AuthController extends Controller
             $this->sendOtp($request->phone, $otp); // متدی برای ارسال OTP
 
             return response()->json([
-                'message' => 'این کاربر وجود ندارد - کد یکبار مصرف برای ثبت نام ارسال شد',
-                'has_account' => false,
-                'otp_ttl' => 120, // زمان معتبر بودن کد
+//                'message' => 'این کاربر وجود ندارد - کد یکبار مصرف برای ثبت نام ارسال شد',
+//                'has_account' => false,
+//                'otp_ttl' => 120, // زمان معتبر بودن کد
+                'status' => 200,
+                'data'=> [
+                    'phone'=>$request->phone,
+                    'has_account' => false,
+                    'has_password' =>false,
+                    'massage' => 'این کاربر وجود ندارد - کد یکبار مصرف برای ثبت نام ارسال شد',
+                    'login_method' =>'otp',
+                    'otp_ttl' => 120, // 120 ثانیه (یا زمان معتبر بودن کد)
+                ],
             ]);
         }
     }
