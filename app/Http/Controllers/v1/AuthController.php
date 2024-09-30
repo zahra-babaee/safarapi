@@ -40,21 +40,40 @@ class AuthController extends Controller
 //                'has_account' => false
 //            ], 429);
 //        }
+//        $lastOtp = Otp::query()->where('phone', $request->phone)->orderBy('created_at', 'desc')->first();
+//
+//        if ($lastOtp && $lastOtp->created_at >= now()->subSeconds(120)) {
+//            // محاسبه زمان باقی‌مانده تا مجاز بودن درخواست جدید
+//            $remainingSeconds = $lastOtp->created_at->addSeconds(120)->diffInSeconds(now(), false);
+//
+//            // اطمینان از اینکه مقدار به صورت صحیح برگردانده شود (همیشه غیرمنفی و بدون اعشار)
+//            $remainingSeconds = max(0, ceil($remainingSeconds));
+//
+//            return response()->json([
+//                'message' => 'لطفاً قبل از درخواست جدید ۱۲۰ ثانیه صبر کنید.',
+//                'otp_ttl' => $remainingSeconds, // مقدار TTL به ثانیه
+//                'has_account' => false
+//            ], 429);
+//        }
+
         $lastOtp = Otp::query()->where('phone', $request->phone)->orderBy('created_at', 'desc')->first();
 
-        if ($lastOtp && $lastOtp->created_at >= now()->subSeconds(120)) {
-            // محاسبه زمان باقی‌مانده تا مجاز بودن درخواست جدید
-            $remainingSeconds = $lastOtp->created_at->addSeconds(120)->diffInSeconds(now(), false);
+        if ($lastOtp) {
+            // محاسبه زمان ارسال آخرین OTP
+            $timeSinceLastOtp = now()->diffInSeconds($lastOtp->created_at);
 
-            // اطمینان از اینکه مقدار به صورت صحیح برگردانده شود (همیشه غیرمنفی و بدون اعشار)
-            $remainingSeconds = max(0, ceil($remainingSeconds));
+            // اگر از ارسال آخرین OTP کمتر از 120 ثانیه گذشته است، زمان باقی‌مانده را حساب کنید
+            if ($timeSinceLastOtp < 120) {
+                $remainingSeconds = 120 - $timeSinceLastOtp;
 
-            return response()->json([
-                'message' => 'لطفاً قبل از درخواست جدید ۱۲۰ ثانیه صبر کنید.',
-                'otp_ttl' => $remainingSeconds, // مقدار TTL به ثانیه
-                'has_account' => false
-            ], 429);
+                return response()->json([
+                    'message' => 'لطفاً قبل از درخواست جدید ۱۲۰ ثانیه صبر کنید.',
+                    'otp_ttl' => $remainingSeconds, // مقدار TTL به ثانیه
+                    'has_account' => false
+                ], 429);
+            }
         }
+
         $user = User::query()->where('phone', $request->phone)->first();
 
         if ($user) {
