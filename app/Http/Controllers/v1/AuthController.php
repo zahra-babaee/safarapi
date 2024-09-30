@@ -72,7 +72,7 @@ class AuthController extends Controller
 
                 return response()->json([
                     'message' => 'لطفاً قبل از درخواست جدید ۱۲۰ ثانیه صبر کنید.',
-                    'otp_ttl' => $remainingSeconds, // مقدار TTL به ثانیه
+                    'otp_ttl' => $timeSinceLastOtp, // مقدار TTL به ثانیه
                     'has_account' => false
                 ], 429);
             }
