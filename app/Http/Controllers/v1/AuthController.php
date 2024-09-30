@@ -18,8 +18,50 @@ class AuthController extends Controller
     {
         //
     }
-
-    //ثبت نام یا ورود کاربر
+    /**
+     * @OA\Post(
+     *     path="/api/register",
+     *     summary="Register or login a user with OTP",
+     *     tags={"Authentication"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"phone"},
+     *             @OA\Property(property="phone", type="string", example="09123456789", description="User's phone number")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="OTP sent or user exists",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="integer", example=200),
+     *             @OA\Property(property="data", type="object",
+     *                 @OA\Property(property="phone", type="string", example="09123456789"),
+     *                 @OA\Property(property="has_account", type="boolean", example=true),
+     *                 @OA\Property(property="has_password", type="boolean", example=false),
+     *                 @OA\Property(property="message", type="string", example="OTP sent."),
+     *                 @OA\Property(property="login_method", type="string", example="otp"),
+     *                 @OA\Property(property="otp_ttl", type="integer", example=120)
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="Validation error",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Invalid phone number format")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=429,
+     *         description="Too many requests",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Please wait 2 minutes before requesting a new OTP."),
+     *             @OA\Property(property="otp_ttl", type="integer", example=100)
+     *         )
+     *     )
+     * )
+     */
     public function register(Request $request)
     {
         //ورود شماره تلفن
@@ -31,48 +73,17 @@ class AuthController extends Controller
             return response()->json($validator->errors()->toJson(), 400);
         }
 
-        //بررسی آخرین درخواست کد یکبار مصرف
-//        $lastOtp = Otp::query()->where('phone', $request->phone)->orderBy('created_at', 'desc')->first();
-//        // اگر از ارسال آخرین کد کمتر از 2 دقیقه گذشته باشد نمیتواند مجدد درخواست کد بدهد
-//        if ($lastOtp && $lastOtp->created_at >= now()->subMinutes(2)) {
-//            return response()->json([
-//                'message' => 'لطفاً قبل از درخواست جدید دو دقیقه صبر کنید.',
-//                'has_account' => false
-//            ], 429);
-//        }
-//        $lastOtp = Otp::query()->where('phone', $request->phone)->orderBy('created_at', 'desc')->first();
-//
-//        if ($lastOtp && $lastOtp->created_at >= now()->subSeconds(120)) {
-//            // محاسبه زمان باقی‌مانده تا مجاز بودن درخواست جدید
-//            $remainingSeconds = $lastOtp->created_at->addSeconds(120)->diffInSeconds(now(), false);
-//
-//            // اطمینان از اینکه مقدار به صورت صحیح برگردانده شود (همیشه غیرمنفی و بدون اعشار)
-//            $remainingSeconds = max(0, ceil($remainingSeconds));
-//
-//            return response()->json([
-//                'message' => 'لطفاً قبل از درخواست جدید ۱۲۰ ثانیه صبر کنید.',
-//                'otp_ttl' => $remainingSeconds, // مقدار TTL به ثانیه
-//                'has_account' => false
-//            ], 429);
-//        }
-
         $lastOtp = Otp::query()->where('phone', $request->phone)->orderBy('created_at', 'desc')->first();
 
         if ($lastOtp) {
-            // محاسبه زمان فعلی و زمان ایجاد آخرین OTP
             $currentTime = now()->timestamp;
             $otpCreatedTime = $lastOtp->created_at->timestamp;
-
-            // محاسبه تفاوت زمانی
             $timeSinceLastOtp = $currentTime - $otpCreatedTime;
-
-            // اگر از ارسال آخرین OTP کمتر از 120 ثانیه گذشته باشد
             if ($timeSinceLastOtp < 120) {
-                // محاسبه زمان باقی‌مانده از 120 ثانیه و اطمینان از اینکه عدد صحیح و غیر منفی باشد
                 $remainingSeconds = max(0, 120 - $timeSinceLastOtp);
 
                 return response()->json([
-                    'message' => 'لطفاً قبل از درخواست جدید ۱۲۰ ثانیه صبر کنید.',
+                    'message' => 'لطفاً قبل از درخواست جدید 2 دقیقه صبر کنید.',
                     'otp_ttl' => $remainingSeconds, // مقدار TTL به ثانیه
                     'has_account' => false
                 ], 429);
@@ -105,8 +116,7 @@ class AuthController extends Controller
                     'phone' => $request->phone,
                     'otp' => $otp,
                 ]);
-                // ارسال OTP به شماره تلفن (کد مشابهی که قبلاً نوشتی)
-                $this->sendOtp($request->phone, $otp); // متدی برای ارسال OTP
+                $this->sendOtp($request->phone, $otp);
 
                 return response()->json([
                     'status' => 200,
@@ -128,13 +138,9 @@ class AuthController extends Controller
                 'otp' => $otp,
                 'type' => 'register',
             ]);
-            // ارسال OTP به شماره تلفن
-            $this->sendOtp($request->phone, $otp); // متدی برای ارسال OTP
+            $this->sendOtp($request->phone, $otp);
 
             return response()->json([
-//                'message' => 'این کاربر وجود ندارد - کد یکبار مصرف برای ثبت نام ارسال شد',
-//                'has_account' => false,
-//                'otp_ttl' => 120, // زمان معتبر بودن کد
                 'status' => 200,
                 'data'=> [
                     'phone'=>$request->phone,
@@ -142,7 +148,7 @@ class AuthController extends Controller
                     'has_password' =>false,
                     'massage' => 'این کاربر وجود ندارد - کد یکبار مصرف برای ثبت نام ارسال شد',
                     'login_method' =>'otp',
-                    'otp_ttl' => 120, // 120 ثانیه (یا زمان معتبر بودن کد)
+                    'otp_ttl' => 120,
                 ],
             ]);
         }
