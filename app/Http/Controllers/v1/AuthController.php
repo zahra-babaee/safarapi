@@ -20,7 +20,7 @@ class AuthController extends Controller
     }
     /**
      * @OA\Post(
-     *     path="/api/register",
+     *     path="v1/api/register",
      *     summary="Register or login a user with OTP",
      *     tags={"Authentication"},
      *     @OA\RequestBody(
@@ -111,12 +111,18 @@ class AuthController extends Controller
                 ]);
             } else {
                 // کاربر وجود دارد ولی رمز عبور ندارد: ارسال کد OTP
-                $otp = rand(1000, 9999);
+                $EnteredOtp = rand(1000, 9999);
                 Otp::query()->create([
                     'phone' => $request->phone,
                     'otp' => $otp,
                 ]);
                 $this->sendOtp($request->phone, $otp);
+
+                $otpValidityDuration = 120; // اعتبار OTP به ثانیه
+                $createdTime = $EnteredOtp->created_at->timestamp; // زمان ایجاد OTP به صورت timestamp
+                $currentTime = now()->timestamp; // زمان فعلی به صورت timestamp
+                $timeElapsed = $currentTime - $createdTime; // زمان گذشته از ایجاد OTP
+                $remainingSeconds = max(0, $otpValidityDuration - $timeElapsed); // زمان باقی‌مانده
 
                 return response()->json([
                     'status' => 200,
@@ -126,7 +132,7 @@ class AuthController extends Controller
                         'has_password' =>false,
                         'massage' => 'کدیکبار مصرف ارسال شد.',
                         'login_method' =>'otp',
-                        'otp_ttl' => 120, // 120 ثانیه (یا زمان معتبر بودن کد)
+                        'otp_ttl' => $remainingSeconds, // 120 ثانیه (یا زمان معتبر بودن کد)
                     ],
                 ]);
             }
