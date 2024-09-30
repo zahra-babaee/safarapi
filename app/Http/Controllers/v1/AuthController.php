@@ -20,7 +20,7 @@ class AuthController extends Controller
     }
     /**
      * @OA\Post(
-     *     path="v1/api/register",
+     *     path="/v1/api/register",
      *     summary="Register or login a user with OTP",
      *     tags={"Authentication"},
      *     @OA\RequestBody(

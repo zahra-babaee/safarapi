@@ -13,13 +13,13 @@
         "version": "1.0.0"
     },
     "paths": {
-        "/api/register": {
+        "/v1/api/register": {
             "post": {
                 "tags": [
                     "Authentication"
                 ],
                 "summary": "Register or login a user with OTP",
-                "operationId": "f167f186a486a0f8e06ffb1336624738",
+                "operationId": "43c603c554b0bd58894476850f421987",
                 "requestBody": {
                     "required": true,
                     "content": {
