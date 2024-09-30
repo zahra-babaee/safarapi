@@ -69,7 +69,6 @@ class AuthController extends Controller
             // اگر از ارسال آخرین OTP کمتر از 120 ثانیه گذشته باشد
             if ($timeSinceLastOtp < 120) {
                 // محاسبه زمان باقی‌مانده از 120 ثانیه و اطمینان از اینکه عدد صحیح و غیر منفی باشد
-                $remainingSeconds = max(0, 120 - $timeSinceLastOtp);
 
                 return response()->json([
                     'message' => 'لطفاً قبل از درخواست جدید ۱۲۰ ثانیه صبر کنید.',
