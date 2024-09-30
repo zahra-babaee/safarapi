@@ -59,8 +59,12 @@ class AuthController extends Controller
         $lastOtp = Otp::query()->where('phone', $request->phone)->orderBy('created_at', 'desc')->first();
 
         if ($lastOtp) {
-            // زمان ایجاد آخرین OTP به زمان حال
-            $timeSinceLastOtp = now()->diffInSeconds($lastOtp->created_at, false); // false باعث می‌شود که مقادیر منفی هم محاسبه شود
+            // محاسبه زمان فعلی و زمان ایجاد آخرین OTP
+            $currentTime = now()->timestamp;
+            $otpCreatedTime = $lastOtp->created_at->timestamp;
+
+            // محاسبه تفاوت زمانی
+            $timeSinceLastOtp = $currentTime - $otpCreatedTime;
 
             // اگر از ارسال آخرین OTP کمتر از 120 ثانیه گذشته باشد
             if ($timeSinceLastOtp < 120) {
@@ -74,7 +78,6 @@ class AuthController extends Controller
                 ], 429);
             }
         }
-
         $user = User::query()->where('phone', $request->phone)->first();
 
         if ($user) {
