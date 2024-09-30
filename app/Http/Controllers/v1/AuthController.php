@@ -146,6 +146,12 @@ class AuthController extends Controller
             ]);
             $this->sendOtp($request->phone, $otp);
 
+            $otpValidityDuration = 120; // اعتبار OTP به ثانیه
+            $createdTime = $otp->created_at->timestamp; // زمان ایجاد OTP به صورت timestamp
+            $currentTime = now()->timestamp; // زمان فعلی به صورت timestamp
+            $timeElapsed = $currentTime - $createdTime; // زمان گذشته از ایجاد OTP
+            $remainingSeconds = max(0, $otpValidityDuration - $timeElapsed); // زمان باقی‌مانده
+
             return response()->json([
                 'status' => 200,
                 'data'=> [
@@ -154,7 +160,7 @@ class AuthController extends Controller
                     'has_password' =>false,
                     'massage' => 'این کاربر وجود ندارد - کد یکبار مصرف برای ثبت نام ارسال شد',
                     'login_method' =>'otp',
-                    'otp_ttl' => 120,
+                    'otp_ttl' => $remainingSeconds,
                 ],
             ]);
         }
