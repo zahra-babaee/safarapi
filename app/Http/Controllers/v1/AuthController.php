@@ -59,13 +59,13 @@ class AuthController extends Controller
         $lastOtp = Otp::query()->where('phone', $request->phone)->orderBy('created_at', 'desc')->first();
 
         if ($lastOtp) {
-            // محاسبه تفاوت زمانی از زمان ایجاد آخرین OTP تا حالا (بر حسب ثانیه)
-            $timeSinceLastOtp = now()->diffInSeconds($lastOtp->created_at);
+            // زمان ایجاد آخرین OTP به زمان حال
+            $timeSinceLastOtp = now()->diffInSeconds($lastOtp->created_at, false); // false باعث می‌شود که مقادیر منفی هم محاسبه شود
 
             // اگر از ارسال آخرین OTP کمتر از 120 ثانیه گذشته باشد
             if ($timeSinceLastOtp < 120) {
-                // محاسبه زمان باقی‌مانده و اطمینان از اینکه عدد صحیح و بدون اعشار باشد
-                $remainingSeconds = max(0, 120 - floor($timeSinceLastOtp));
+                // محاسبه زمان باقی‌مانده از 120 ثانیه و اطمینان از اینکه عدد صحیح و غیر منفی باشد
+                $remainingSeconds = max(0, 120 - $timeSinceLastOtp);
 
                 return response()->json([
                     'message' => 'لطفاً قبل از درخواست جدید ۱۲۰ ثانیه صبر کنید.',
