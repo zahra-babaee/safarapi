@@ -99,7 +99,8 @@ class AuthController extends Controller
         $otpValidityDuration = 120; // اعتبار OTP به ثانیه
         $lastOtp = Otp::query()->where('phone', $request->phone)->orderBy('created_at', 'desc')->first();
 
-        if ($lastOtp) {
+        // بررسی اینکه آیا OTP قبلی وجود دارد
+        if ($lastOtp && is_object($lastOtp)) {
             $currentTime = now()->timestamp;
             $otpCreatedTime = $lastOtp->created_at->timestamp;
             $timeSinceLastOtp = $currentTime - $otpCreatedTime;
@@ -120,8 +121,7 @@ class AuthController extends Controller
                             'otp_ttl' => $remainingSeconds,
                         ],
                     ]);
-                }
-            } else {
+                } else {
                 $lastOtp = Otp::query()->where('phone', $request->phone)->orderBy('created_at', 'desc')->first();
                 if ($lastOtp) {
                     $currentTime = now()->timestamp;
