@@ -16,7 +16,7 @@ Route::group([
    'prefix' => 'v1'
 ], function ($router) {
     Route::post('register', [AuthController::class, 'register']);
-    Route::post('verify-otp', [AuthController::class, 'verifyOTP']);
+    Route::post('verify-otp', [AuthController::class, 'verifyOtp']);
     Route::get('users', [\App\Http\Controllers\v1\UserController::class, 'index']);
 
     Route::post('forget-password', [AuthController::class, 'forgetPassword']);
