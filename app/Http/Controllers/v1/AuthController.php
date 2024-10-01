@@ -69,7 +69,7 @@ class AuthController extends Controller
             'phone' => 'required|regex:/^09[0-9]{9}$/|digits:11',
 
         ]);
-        if($validator->fails()){
+        if ($validator->fails()) {
             return response()->json($validator->errors()->toJson(), 400);
         }
 
@@ -92,31 +92,21 @@ class AuthController extends Controller
         $user = User::query()->where('phone', $request->phone)->first();
 
         if ($user) {
-            // کاربر وجود دارد: بررسی وجود رمز عبور
             if ($user->has_password) {
                 return response()->json([
-//                    'status' => 200,
-//                    'data'=> [
-//                        'phone'=>$request->phone,
-//                        'has_account' => true,
-//                        'has_password' => true,
-//                        'message' => 'این کاربر وجود دارد. می‌توانید با رمز عبور هم وارد شوید.',
-//                        'login_method' =>'password',
-//                        'otp_ttl' => 120, // 120 ثانیه (یا زمان معتبر بودن کد)
-//                    ],
-                    'phone'=>$request->phone,
+                    'phone' => $request->phone,
                     'message' => 'این کاربر وجود دارد. می‌توانید با رمز عبور هم وارد شوید.',
                     'has_account' => true,
                     'has_password' => true,
                 ]);
             } else {
                 // کاربر وجود دارد ولی رمز عبور ندارد: ارسال کد OTP
-                $otp = rand(1000, 9999);
-                Otp::query()->create([
+                $otp = Otp::query()->create([
                     'phone' => $request->phone,
-                    'otp' => $otp,
+                    'otp' => rand(1000, 9999),
                 ]);
-                $this->sendOtp($request->phone, $otp);
+
+                $this->sendOtp($request->phone, $otp->otp);
 
                 $otpValidityDuration = 120; // اعتبار OTP به ثانیه
                 $createdTime = $otp->created_at->timestamp; // زمان ایجاد OTP به صورت timestamp
@@ -126,25 +116,25 @@ class AuthController extends Controller
 
                 return response()->json([
                     'status' => 200,
-                    'data'=> [
-                        'phone'=>$request->phone,
+                    'data' => [
+                        'phone' => $request->phone,
                         'has_account' => true,
-                        'has_password' =>false,
+                        'has_password' => false,
                         'massage' => 'کدیکبار مصرف ارسال شد.',
-                        'login_method' =>'otp',
-                        'otp_ttl' => $remainingSeconds, // 120 ثانیه (یا زمان معتبر بودن کد)
+                        'login_method' => 'otp',
+                        'otp_ttl' => $remainingSeconds,
                     ],
                 ]);
             }
         } else {
             // کاربر وجود ندارد: ارسال کد OTP و ثبت نام
-            $otp = rand(1000, 9999);
-            Otp::query()->create([
+            $otp = Otp::query()->create([
                 'phone' => $request->phone,
-                'otp' => $otp,
+                'otp' => rand(1000, 9999),
                 'type' => 'register',
             ]);
-            $this->sendOtp($request->phone, $otp);
+
+            $this->sendOtp($request->phone, $otp->otp);
 
             $otpValidityDuration = 120; // اعتبار OTP به ثانیه
             $createdTime = $otp->created_at->timestamp; // زمان ایجاد OTP به صورت timestamp
@@ -154,12 +144,12 @@ class AuthController extends Controller
 
             return response()->json([
                 'status' => 200,
-                'data'=> [
-                    'phone'=>$request->phone,
+                'data' => [
+                    'phone' => $request->phone,
                     'has_account' => false,
-                    'has_password' =>false,
+                    'has_password' => false,
                     'massage' => 'این کاربر وجود ندارد - کد یکبار مصرف برای ثبت نام ارسال شد',
-                    'login_method' =>'otp',
+                    'login_method' => 'otp',
                     'otp_ttl' => $remainingSeconds,
                 ],
             ]);
