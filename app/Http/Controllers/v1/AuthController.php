@@ -122,7 +122,56 @@ class AuthController extends Controller
                         ],
                     ]);
                 } else {
+                    $lastOtp = Otp::query()->where('phone', $request->phone)->orderBy('created_at', 'desc')->first();
+                    if ($lastOtp) {
+                        $currentTime = now()->timestamp;
+                        $otpCreatedTime = $lastOtp->created_at->timestamp;
+                        $timeSinceLastOtp = $currentTime - $otpCreatedTime;
+
+                        if ($timeSinceLastOtp < 120) {
+                            $remainingSeconds = max(0, 120 - $timeSinceLastOtp);
+
+                            return response()->json([
+                                'status' => 200,
+                                'data' => [
+                                    'phone' => $request->phone,
+                                    'message' => 'کد یکبار مصرف قبلی هنوز معتبر است.',
+                                    'has_account' => true,
+                                    'has_password' => false,
+                                    'otp_ttl' => $remainingSeconds,
+                                ],
+                            ]);
+                        } else {
+                            $otp = rand(1000, 9999);
+                            Otp::query()->create([
+                                'phone' => $request->phone,
+                                'otp' => $otp,
+                            ]);
+                            $this->sendOtp($request->phone, $otp);
+//                        $otpValidityDuration = 120;
+                            $createdTime = $otp->created_at->timestamp; // زمان ایجاد OTP به صورت timestamp
+                            $otpValidityDuration = 120;
+                            $currentTime = now()->timestamp; // زمان فعلی به صورت timestamp
+                            $timeElapsed = $currentTime - $createdTime; // زمان گذشته از ایجاد OTP
+                            $remainingSeconds = max(0, $otpValidityDuration - $timeElapsed); // زمان باقی‌مانده
+
+
+                            return response()->json([
+                                'status' => 200,
+                                'data' => [
+                                    'phone' => $request->phone,
+                                    'message' => 'کد یکبار مصرف جدید ارسال شد.',
+                                    'has_account' => true,
+                                    'has_password' => false,
+                                    'otp_ttl' => $remainingSeconds, // زمان اعتبار کد جدید
+                                ],
+                            ]);
+                        }
+                    }
+                }
+            } else {
                 $lastOtp = Otp::query()->where('phone', $request->phone)->orderBy('created_at', 'desc')->first();
+
                 if ($lastOtp) {
                     $currentTime = now()->timestamp;
                     $otpCreatedTime = $lastOtp->created_at->timestamp;
@@ -136,81 +185,33 @@ class AuthController extends Controller
                             'data' => [
                                 'phone' => $request->phone,
                                 'message' => 'کد یکبار مصرف قبلی هنوز معتبر است.',
-                                'has_account' => true,
+                                'has_account' => false,  // کاربر وجود ندارد
                                 'has_password' => false,
-                                'otp_ttl' => $remainingSeconds,
-                            ],
-                        ]);
-                    } else {
-                        $otp = rand(1000, 9999);
-                        Otp::query()->create([
-                            'phone' => $request->phone,
-                            'otp' => $otp,
-                        ]);
-                        $this->sendOtp($request->phone, $otp);
-//                        $otpValidityDuration = 120;
-                        $createdTime = $otp->created_at->timestamp; // زمان ایجاد OTP به صورت timestamp
-                        $otpValidityDuration = 120;
-                        $currentTime = now()->timestamp; // زمان فعلی به صورت timestamp
-                        $timeElapsed = $currentTime - $createdTime; // زمان گذشته از ایجاد OTP
-                        $remainingSeconds = max(0, $otpValidityDuration - $timeElapsed); // زمان باقی‌مانده
-
-
-                        return response()->json([
-                            'status' => 200,
-                            'data' => [
-                                'phone' => $request->phone,
-                                'message' => 'کد یکبار مصرف جدید ارسال شد.',
-                                'has_account' => true,
-                                'has_password' => false,
-                                'otp_ttl' => $remainingSeconds, // زمان اعتبار کد جدید
+                                'otp_ttl' => $remainingSeconds, // زمان باقی‌مانده
                             ],
                         ]);
                     }
                 }
-            }
-        } else {
-            $lastOtp = Otp::query()->where('phone', $request->phone)->orderBy('created_at', 'desc')->first();
 
-            if ($lastOtp) {
-                $currentTime = now()->timestamp;
-                $otpCreatedTime = $lastOtp->created_at->timestamp;
-                $timeSinceLastOtp = $currentTime - $otpCreatedTime;
-
-                if ($timeSinceLastOtp < 120) {
-                    $remainingSeconds = max(0, 120 - $timeSinceLastOtp);
-
-                    return response()->json([
-                        'status' => 200,
-                        'data' => [
-                            'phone' => $request->phone,
-                            'message' => 'کد یکبار مصرف قبلی هنوز معتبر است.',
-                            'has_account' => false,  // کاربر وجود ندارد
-                            'has_password' => false,
-                            'otp_ttl' => $remainingSeconds, // زمان باقی‌مانده
-                        ],
-                    ]);
-                }
-            }
-
-            $otp = rand(1000, 9999);
-            Otp::query()->create([
-                'phone' => $request->phone,
-                'otp' => $otp,
-                'type' => 'register',
-            ]);
-            $this->sendOtp($request->phone, $otp);
-
-            return response()->json([
-                'status' => 200,
-                'data' => [
+                $otp = rand(1000, 9999);
+                Otp::query()->create([
                     'phone' => $request->phone,
-                    'message' => 'کد یکبار مصرف جدید ارسال شد.',
-                    'has_account' => false,  // کاربر وجود ندارد
-                    'has_password' => false,
-                    'otp_ttl' => $otpValidityDuration, // زمان اعتبار کد جدید
-                ],
-            ]);
+                    'otp' => $otp,
+                    'type' => 'register',
+                ]);
+                $this->sendOtp($request->phone, $otp);
+
+                return response()->json([
+                    'status' => 200,
+                    'data' => [
+                        'phone' => $request->phone,
+                        'message' => 'کد یکبار مصرف جدید ارسال شد.',
+                        'has_account' => false,  // کاربر وجود ندارد
+                        'has_password' => false,
+                        'otp_ttl' => $otpValidityDuration, // زمان اعتبار کد جدید
+                    ],
+                ]);
+            }
         }
     }
         public function verifyOtp(Request $request)
