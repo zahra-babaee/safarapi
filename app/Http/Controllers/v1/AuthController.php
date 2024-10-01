@@ -71,20 +71,56 @@ class AuthController extends Controller
             return response()->json($validator->errors()->toJson(), 400);
         }
 
+//        $user = User::query()->where('phone', $request->phone)->first();
+//        $otpValidityDuration = 120;
+//        $lastOtp = Otp::query()->where('phone', $request->phone)->orderBy('created_at', 'desc')->first();
+//        if ($lastOtp) {
+//            $currentTime = now()->timestamp;
+//            $otpCreatedTime = $lastOtp->created_at->timestamp;
+//            $timeSinceLastOtp = $currentTime - $otpCreatedTime;
+//
+//            if ($timeSinceLastOtp < 120) {
+//                $remainingSeconds = max(0, 120 - $timeSinceLastOtp);
+//
+//
+//                if ($user) {
+//            if ($user->has_password) {
+//                return response()->json([
+//                    'status' => 200,
+//                    'data' => [
+//                        'phone' => $request->phone,
+//                        'message' => 'این کاربر وجود دارد. می‌توانید با رمز عبور هم وارد شوید.',
+//                        'has_account' => true,
+//                        'has_password' => true,
+//                        'otp_ttl' => $remainingSeconds,
+//                    ],
+//                ]);
         $user = User::query()->where('phone', $request->phone)->first();
-        $otpValidityDuration = 120;
+        $otpValidityDuration = 120; // اعتبار OTP به ثانیه
+        $lastOtp = Otp::query()->where('phone', $request->phone)->orderBy('created_at', 'desc')->first();
 
-        if ($user) {
-            if ($user->has_password) {
-                return response()->json([
-                    'status' => 200,
-                    'data' => [
-                        'phone' => $request->phone,
-                        'message' => 'این کاربر وجود دارد. می‌توانید با رمز عبور هم وارد شوید.',
-                        'has_account' => true,
-                        'has_password' => true,
-                    ],
-                ]);
+        if ($lastOtp) {
+            $currentTime = now()->timestamp;
+            $otpCreatedTime = $lastOtp->created_at->timestamp;
+            $timeSinceLastOtp = $currentTime - $otpCreatedTime;
+
+            // بررسی مدت زمان باقیمانده از اعتبار OTP
+            if ($timeSinceLastOtp < $otpValidityDuration) {
+                $remainingSeconds = max(0, $otpValidityDuration - $timeSinceLastOtp);
+
+                // اگر کاربر وجود دارد و رمز عبور دارد
+                if ($user && $user->has_password) {
+                    return response()->json([
+                        'status' => 200,
+                        'data' => [
+                            'phone' => $request->phone,
+                            'message' => 'این کاربر وجود دارد. می‌توانید با رمز عبور هم وارد شوید.',
+                            'has_account' => true,
+                            'has_password' => true,
+                            'otp_ttl' => $remainingSeconds,
+                        ],
+                    ]);
+                }
             } else {
                 $lastOtp = Otp::query()->where('phone', $request->phone)->orderBy('created_at', 'desc')->first();
                 if ($lastOtp) {
@@ -255,7 +291,7 @@ class AuthController extends Controller
         // اعتبارسنجی ورودی‌ها
         $validator = Validator::make($request->all(), [
             'phone' => 'required|regex:/^09[0-9]{9}$/|digits:11',
-            'password' => 'required|string|min:6',
+            'password' => 'required|string',
         ]);
         if ($validator->fails()) {
             return response()->json(['error' => $validator->errors()], 400);
