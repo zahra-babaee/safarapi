@@ -67,37 +67,53 @@ class AuthController extends Controller
         //ورود شماره تلفن
         $validator = Validator::make($request->all(), [
             'phone' => 'required|regex:/^09[0-9]{9}$/|digits:11',
-
         ]);
         if ($validator->fails()) {
             return response()->json($validator->errors()->toJson(), 400);
         }
 
+        // بررسی آخرین OTP
         $lastOtp = Otp::query()->where('phone', $request->phone)->orderBy('created_at', 'desc')->first();
 
+        // اگر کمتر از 2 دقیقه از ارسال OTP گذشته باشد
         if ($lastOtp) {
             $currentTime = now()->timestamp;
             $otpCreatedTime = $lastOtp->created_at->timestamp;
             $timeSinceLastOtp = $currentTime - $otpCreatedTime;
+
             if ($timeSinceLastOtp < 120) {
                 $remainingSeconds = max(0, 120 - $timeSinceLastOtp);
 
+                // برگرداندن پیام و زمان باقی‌مانده، بدون ارسال OTP جدید
                 return response()->json([
-                    'message' => 'لطفاً قبل از درخواست جدید 2 دقیقه صبر کنید.',
-                    'otp_ttl' => $remainingSeconds, // مقدار TTL به ثانیه
-                    'has_account' => false
-                ], 429);
+                    'status' => 200,
+                    'data' => [
+                        'phone' => $request->phone,
+                        'has_account' => true,
+                        'has_password' => false,
+                        'message' => 'کد یکبار مصرف ارسال شد.',
+                        'login_method' => 'otp',
+                        'otp_ttl' => $remainingSeconds,
+                    ],
+                ]);
             }
         }
+
+        // بررسی وجود کاربر
         $user = User::query()->where('phone', $request->phone)->first();
 
+        // اگر کاربر وجود دارد
         if ($user) {
             if ($user->has_password) {
+                // کاربر دارای رمز عبور است
                 return response()->json([
-                    'phone' => $request->phone,
-                    'message' => 'این کاربر وجود دارد. می‌توانید با رمز عبور هم وارد شوید.',
-                    'has_account' => true,
-                    'has_password' => true,
+                    'status' => 200,
+                    'data' => [
+                        'phone' => $request->phone,
+                        'message' => 'این کاربر وجود دارد. می‌توانید با رمز عبور هم وارد شوید.',
+                        'has_account' => true,
+                        'has_password' => true,
+                    ],
                 ]);
             } else {
                 // کاربر وجود دارد ولی رمز عبور ندارد: ارسال کد OTP
@@ -108,6 +124,7 @@ class AuthController extends Controller
 
                 $this->sendOtp($request->phone, $otp->otp);
 
+                // محاسبه زمان باقی‌مانده
                 $otpValidityDuration = 120; // اعتبار OTP به ثانیه
                 $createdTime = $otp->created_at->timestamp; // زمان ایجاد OTP به صورت timestamp
                 $currentTime = now()->timestamp; // زمان فعلی به صورت timestamp
@@ -120,7 +137,7 @@ class AuthController extends Controller
                         'phone' => $request->phone,
                         'has_account' => true,
                         'has_password' => false,
-                        'massage' => 'کدیکبار مصرف ارسال شد.',
+                        'message' => 'کد یکبار مصرف ارسال شد.',
                         'login_method' => 'otp',
                         'otp_ttl' => $remainingSeconds,
                     ],
@@ -136,6 +153,7 @@ class AuthController extends Controller
 
             $this->sendOtp($request->phone, $otp->otp);
 
+            // محاسبه زمان باقی‌مانده
             $otpValidityDuration = 120; // اعتبار OTP به ثانیه
             $createdTime = $otp->created_at->timestamp; // زمان ایجاد OTP به صورت timestamp
             $currentTime = now()->timestamp; // زمان فعلی به صورت timestamp
@@ -148,7 +166,7 @@ class AuthController extends Controller
                     'phone' => $request->phone,
                     'has_account' => false,
                     'has_password' => false,
-                    'massage' => 'این کاربر وجود ندارد - کد یکبار مصرف برای ثبت نام ارسال شد',
+                    'message' => 'کد یکبار مصرف ارسال شد.',
                     'login_method' => 'otp',
                     'otp_ttl' => $remainingSeconds,
                 ],
