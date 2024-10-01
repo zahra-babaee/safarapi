@@ -111,7 +111,7 @@ class AuthController extends Controller
                 ]);
             } else {
                 // کاربر وجود دارد ولی رمز عبور ندارد: ارسال کد OTP
-                $EnteredOtp = rand(1000, 9999);
+                $otp = rand(1000, 9999);
                 Otp::query()->create([
                     'phone' => $request->phone,
                     'otp' => $otp,
@@ -119,7 +119,7 @@ class AuthController extends Controller
                 $this->sendOtp($request->phone, $otp);
 
                 $otpValidityDuration = 120; // اعتبار OTP به ثانیه
-                $createdTime = $EnteredOtp->created_at->timestamp; // زمان ایجاد OTP به صورت timestamp
+                $createdTime = $otp->created_at->timestamp; // زمان ایجاد OTP به صورت timestamp
                 $currentTime = now()->timestamp; // زمان فعلی به صورت timestamp
                 $timeElapsed = $currentTime - $createdTime; // زمان گذشته از ایجاد OTP
                 $remainingSeconds = max(0, $otpValidityDuration - $timeElapsed); // زمان باقی‌مانده
@@ -130,7 +130,7 @@ class AuthController extends Controller
                         'phone'=>$request->phone,
                         'has_account' => true,
                         'has_password' =>false,
-                        'massage' => 'کدیکبار مصرف ارسال شد.',
+                        'message' => 'کدیکبار مصرف ارسال شد.',
                         'login_method' =>'otp',
                         'otp_ttl' => $remainingSeconds, // 120 ثانیه (یا زمان معتبر بودن کد)
                     ],
@@ -165,7 +165,7 @@ class AuthController extends Controller
             ]);
         }
     }
-    public function verifyOtp(Request $request)
+    public function verifyOTP(Request $request)
     {
         // اعتبارسنجی ورودی
         $validator = Validator::make($request->all(), [
@@ -196,20 +196,20 @@ class AuthController extends Controller
                 }
                 $user->update(['has_account' => true]);
 
-                // ارسال پیام ثبت‌نام موفقیت‌آمیز
-                $data = [
-                    $message = 'با موفقیت ثبت نام شد.',
-                    'status' => 200,
-                    'type' => 'Registered!',
-                ];
+//                // ارسال پیام ثبت‌نام موفقیت‌آمیز
+//                $data = [
+//                    $message = 'با موفقیت ثبت نام شد.',
+//                    'status' => 200,
+//                    'type' => 'Registered!',
+//                ];
 
 
-            } else {
-                // اگر کاربر قبلاً ثبت‌نام شده باشد
-                $data = [
-                    $message = 'ورود موفقیت‌آمیز با OTP انجام شد.',
-                    'type' => 'Logged in!'
-                ];
+//            } else {
+//                // اگر کاربر قبلاً ثبت‌نام شده باشد
+//                $data = [
+//                    $message = 'ورود موفقیت‌آمیز با OTP انجام شد.',
+//                    'type' => 'Logged in!'
+//                ];
             }
 
             $otpRecord->delete();
@@ -261,19 +261,6 @@ class AuthController extends Controller
             return response()->json(['message' => 'Successfully logged out']);
         }
     }
-//    public function getUser()
-//    {
-//        try {
-//            if (! $user = JWTAuth::parseToken()->authenticate()) {
-//                return response()->json(['error' => 'User not found'], 404);
-//            }
-//        } catch (JWTException $e) {
-//            return response()->json(['error' => 'Invalid token'], 400);
-//        }
-//
-//        return response()->json(compact('user'));
-//    }
-
     public function forgetPassword(Request $request)
     {
         // اعتبارسنجی ورودی
@@ -320,8 +307,6 @@ class AuthController extends Controller
             ]);
         }
     }
-
-
     public function resetPassword(Request $request)
     {
         // اعتبارسنجی ورودی
@@ -354,14 +339,12 @@ class AuthController extends Controller
 
         return response()->json(['message' => 'رمز عبور با موفقیت بازنشانی شد.']);
     }
-
     private function sendOtp($phone, $otp)
     {
         // ارسال OTP به شماره تلفن
         $curl = curl_init();
         $apikey = '493036347A343565484D3767455769504867546F636A7A30664D6C36316F724E38654E2B42324A2F4166633D'; // کلید API شما
         $message = urlencode("کد یکبار مصرف برای ورود شما: $otp");
-//        $phone = $request->phone;
         $sender = '100090003'; // شماره فرستنده شما
         $url = "https://api.kavenegar.com/v1/$apikey/sms/send.json?receptor=$phone&sender=$sender&message=$message";
 
