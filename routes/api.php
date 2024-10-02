@@ -9,7 +9,10 @@ Route::group([
 ], function ($router) {
     Route::post('logout', [AuthController::class, 'logout'])->middleware('auth:api');
     Route::post('reset-password', [AuthController::class, 'resetPassword'])->middleware('auth:api');
-    Route::get('upload', [\App\Http\Controllers\v1\UploadController::class, 'index']);
+    Route::post('show_avatar', [\App\Http\Controllers\v1\ProfileController::class, 'index'])->middleware('auth:api');
+    Route::post('update_avatar',[\App\Http\Controllers\v1\ProfileController::class, 'update'])->middleware('auth:api');
+    Route::post('Set_Password',[\App\Http\Controllers\v1\ProfileController::class, 'setPassword'])->middleware('auth:api');
+    Route::get('upload', [\App\Http\Controllers\v1\UploadController::class, 'u']);
     Route::post('upload', [\App\Http\Controllers\v1\UploadController::class, 'store']);
 });
 Route::group([
