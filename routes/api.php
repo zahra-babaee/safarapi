@@ -11,7 +11,9 @@ Route::group([
     Route::post('reset-password', [AuthController::class, 'resetPassword'])->middleware('auth:api');
     Route::post('show_avatar', [\App\Http\Controllers\v1\ProfileController::class, 'index'])->middleware('auth:api');
     Route::post('update_avatar',[\App\Http\Controllers\v1\ProfileController::class, 'update'])->middleware('auth:api');
-    Route::post('Set_Password',[\App\Http\Controllers\v1\ProfileController::class, 'setPassword'])->middleware('auth:api');
+//    Route::post('Set_Password',[\App\Http\Controllers\v1\ProfileController::class, 'setPassword'])->middleware('auth:api');
+    Route::middleware('auth:api')->post('/set-password', [\App\Http\Controllers\v1\ProfileController::class, 'setPassword']);
+
     Route::get('upload', [\App\Http\Controllers\v1\UploadController::class, 'u']);
     Route::post('upload', [\App\Http\Controllers\v1\UploadController::class, 'store']);
 });

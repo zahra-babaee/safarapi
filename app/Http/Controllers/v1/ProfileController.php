@@ -6,7 +6,10 @@ use Illuminate\Http\Request;
 use App\Models\Image;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Hash; // اضافه کردن Hash
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
+
+// اضافه کردن Hash
 
 class ProfileController extends Controller
 {
@@ -65,20 +68,34 @@ class ProfileController extends Controller
     // متد تنظیم یا تغییر پسورد
     public function setPassword(Request $request)
     {
-        // اعتبارسنجی پسورد
-        $request->validate([
-            'password' => 'required|string|min:8|confirmed', // password_confirmation هم باید ارسال شود
+        // اعتبارسنجی درخواست
+        $validator = Validator::make($request->all(), [
+            'password' => 'required|min:6|confirmed', // حداقل 6 کاراکتر و تأیید رمز عبور
         ]);
 
-        // دریافت کاربر از طریق توکن احراز هویت
+        if ($validator->fails()) {
+            return response()->json($validator->errors()->toJson(), 400);
+        }
+
+        // پیدا کردن کاربر بر اساس توکن JWT
         $user = auth()->user();
 
-        // تنظیم پسورد جدید و رمزگذاری آن
-        $user->password = Hash::make($request->password);
-        $user->save();
+        // چک کردن اینکه آیا کاربر هنوز رمز عبور ندارد
+        if (!$user->has_password) {
+            // هش کردن رمز عبور
+            $user->password = bcrypt($request->password);
+            $user->has_password = true; // تنظیم پرچم به true
+            $user->save();
+
+            return response()->json([
+                'status' => 200,
+                'message' => 'رمز عبور با موفقیت تنظیم شد.',
+            ]);
+        }
 
         return response()->json([
-            'message' => 'Password set successfully',
+            'status' => 400,
+            'message' => 'شما قبلاً رمز عبور دارید.',
         ]);
     }
 }
