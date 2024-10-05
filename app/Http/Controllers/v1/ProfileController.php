@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\v1;
 
+use App\Models\Otp;
 use Illuminate\Http\Request;
 use App\Models\Image;
 use Illuminate\Routing\Controller;
@@ -22,15 +23,17 @@ class ProfileController extends Controller
         if (!$user->has_avatar) {
             // اولین عکس دیفالت را از جدول images برگردانید
             $defaultAvatar = Image::query()->where('type', 'avatar')->first();
-            return response()->json([
-                'avatar' => $defaultAvatar ? Storage::url($defaultAvatar->path) : null,
-            ]);
+            $avatarUrl = $defaultAvatar ? Storage::url($defaultAvatar->url) : null;
+        } else {
+            // اگر کاربر عکس پروفایل دارد
+            $avatar = $user->avatar;
+            $avatarUrl = $avatar ? Storage::url($avatar->url) : null;
         }
 
-        // اگر کاربر عکس پروفایل دارد
-        $avatar = $user->avatar;
         return response()->json([
-            'avatar' => $avatar ? Storage::url($avatar->path) : null,
+            'name' => $user->name,
+            'phone' => $user->phone,
+            'avatar' => $avatarUrl,
         ]);
     }
     public function updateAvatar(Request $request)
@@ -65,7 +68,7 @@ class ProfileController extends Controller
             $filename = uniqid() . '.' . $request->file('image')->getClientOriginalExtension();
             $path = $request->file('image')->storeAs('profile_photos', $filename, 'public');
 
-            $newImage = Image::create([
+            $newImage = Image::query()->create([
                 'type' => 'avatar',
                 'path' => $path,
             ]);
@@ -98,8 +101,8 @@ class ProfileController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => 'sometimes|string|max:255',
             'phone' => 'sometimes|regex:/^09[0-9]{9}$/|digits:11',
-            'password' => 'sometimes|required_with:old_password|confirmed|min:6',
-            'old_password' => 'sometimes|required_with:password',
+//            'password' => 'sometimes|required_with:old_password|confirmed|min:6',
+//            'old_password' => 'sometimes|required_with:password',
             'profile_picture' => 'sometimes|image|max:2048', // محدودیت سایز 2MB
         ]);
 
