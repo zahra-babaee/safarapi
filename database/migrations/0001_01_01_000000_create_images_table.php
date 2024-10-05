@@ -15,8 +15,8 @@ return new class extends Migration
             $table->id();
             $table->enum('type', ['avatar', 'article'])->default('avatar');
             $table->string('path');
-            $table->foreignId('user_id')->nullable()->constrained('users')->onDelete('cascade');
-            $table->foreignId('article_id')->nullable()->constrained('articles')->onDelete('cascade');
+//            $table->foreignId('user_id')->nullable()->constrained('users')->onDelete('cascade');
+//            $table->foreignId('article_id')->nullable()->constrained('articles')->onDelete('cascade');
             $table->timestamps();
         });
     }

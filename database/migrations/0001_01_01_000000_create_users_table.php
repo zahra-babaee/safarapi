@@ -22,7 +22,7 @@ return new class extends Migration
             $table->string('token')->nullable();
             $table->boolean('has_avatar')->default(false); //False:ندارد - true:دارد
             $table->enum('role',['admin','user'])->default('user');
-            $table->foreignId('image_id')->nullable()->constrained('images')->nullOnDelete();
+            $table->foreignId('profile_image_id')->nullable()->constrained('images')->nullOnDelete();
             $table->softDeletes();
             $table->rememberToken();
             $table->timestamps();
