@@ -166,29 +166,16 @@ class AuthController extends Controller
             $user = User::query()->firstOrCreate([
                 'phone' => $request->get('phone'),
                 'has_password' => false,
+                'name'=> $request->name,
             ]);
 
             if ($user) {
-                $defaultPhoto = Image::first();
+                $defaultPhoto = Image::query()->first();
                 if ($defaultPhoto) {
                     $user->images()->create(['path' => $defaultPhoto->path]);
                     $user->update(['has_avatar' => true]);
                 }
                 $user->update(['has_account' => true]);
-
-                $data = [
-                    $message = 'با موفقیت ثبت نام شد.',
-                    'status' => 200,
-                    'type' => 'Registered!',
-                ];
-
-
-            } else {
-                // اگر کاربر قبلاً ثبت‌نام شده باشد
-                $data = [
-                    $message = 'ورود موفقیت‌آمیز با OTP انجام شد.',
-                    'type' => 'Logged in!'
-                ];
             }
 
             $otpRecord->delete();

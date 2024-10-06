@@ -2,23 +2,16 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 
-
 class User extends Authenticatable implements JWTSubject
 {
     use HasFactory, Notifiable, SoftDeletes;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
     protected $fillable = [
         'phone',
         'name',
@@ -27,41 +20,30 @@ class User extends Authenticatable implements JWTSubject
         'password',
         'has_avatar',
         'avatar',
+        'image_id',
         'token',
         'deleted_at',
     ];
-
+    public function profileImage()
+    {
+        return $this->belongsTo(Image::class, 'profile_image_id');
+    }
     public function getProfilePhoto()
     {
-        $image = $this->image;
+        $image = $this->avatar;
 
-        if ($image && !$image->is_default()) {
+        if ($image && !$image->isDefault()) {
             return $image->path;
         }
-        return Image::query()->where('is_default', 1)->first()->path;
+
+        $defaultImage = Image::query()->where('type', 'avatar')->where('is_default', true)->first();
+        return $defaultImage ? $defaultImage->path : 'default-avatar.png';
     }
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var array<int, string>
-     */
+
     protected $hidden = [
         'password',
         'remember_token',
     ];
-
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
-    protected function casts(): array
-    {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-        ];
-    }
 
     public function getJWTIdentifier()
     {
@@ -71,5 +53,15 @@ class User extends Authenticatable implements JWTSubject
     public function getJWTCustomClaims()
     {
         return [];
+    }
+
+    public function images()
+    {
+        return $this->hasMany(Image::class);
+    }
+
+    public function avatar()
+    {
+        return $this->belongsTo(Image::class, 'image_id');
     }
 }
