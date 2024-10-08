@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\v1;
 
+use App\Dto\BaseDto;
+use App\Dto\BaseDtoStatusEnum;
 use App\Models\Image;
 use Illuminate\Routing\Controller;
 use App\Models\Otp;
@@ -189,13 +191,17 @@ class AuthController extends Controller
                 ], 500);
             }
             // پاسخ با توکن JWT
-            return response()->json([
-                'status' => '200',
-                'data' => [
+//            return response()->json([
+//                'status' => '200',
+//                'data' => [
+//                    'token' => $token, // ارسال توکن در پاسخ
+//                    'user Data' => $user, // ارسال اطلاعات کاربر در پاسخ
+//                ],
+//            ]);
+            return response()->json(new BaseDto(BaseDtoStatusEnum::OK, data: [
                     'token' => $token, // ارسال توکن در پاسخ
                     'user Data' => $user, // ارسال اطلاعات کاربر در پاسخ
-                ],
-            ]);
+                ]));
         } else {
             return response()->json([
                 'message' => 'کد OTP نامعتبر است یا منقضی شده است.',

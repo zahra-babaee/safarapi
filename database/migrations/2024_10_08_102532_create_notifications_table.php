@@ -11,11 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('ticket_attachments', function (Blueprint $table) {
+        Schema::create('notifications', function (Blueprint $table) {
             $table->id();
-            $table->string('path')->nullable();
-            $table->foreignId('ticket_id')->constrained('tickets')->onDelete('cascade');
-            $table->foreignId('message_id')->constrained('message')->onDelete('cascade');
+            $table->string('title');
+            $table->text('description');
+            $table->boolean('is_read')->default(false); //False:خوانده نشده - true:خوانده شده
+            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->timestamps();
         });
     }
@@ -25,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('ticket_attachments');
+        Schema::dropIfExists('notifications');
     }
 };

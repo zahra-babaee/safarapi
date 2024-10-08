@@ -30,5 +30,9 @@ Route::group([
     Route::post('forget-password', [AuthController::class, 'forgetPassword']);
     Route::post('login_password', [\App\Http\Controllers\v1\AuthController::class, 'loginWithPass']);
 
+
+    Route::get('test', function (){
+       return response()->json(new \App\Dto\BaseDto(\App\Dto\BaseDtoStatusEnum::ERROR,"خطا"))->setStatusCode(200);
+    });
 });
 
