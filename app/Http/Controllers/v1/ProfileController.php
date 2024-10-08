@@ -236,7 +236,15 @@ class ProfileController extends Controller
     {
         // اعتبارسنجی ورودی برای تنظیم رمز عبور
         $validator = Validator::make($request->all(), [
-            'password' => 'required|min:6|confirmed',
+            'password' => [
+                'required',
+                'min:8',
+                'confirmed',
+                'regex:/[a-z]/',
+                'regex:/[A-Z]/',
+                'regex:/[0-9]/',
+                'regex:/[@$!%*#?&]/',
+            ],
             'old_password' => 'required_if:has_password,true',
         ]);
 

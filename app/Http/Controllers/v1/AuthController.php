@@ -268,7 +268,7 @@ class AuthController extends Controller
             $lastOtp = Otp::query()->where('phone', $request->phone)->orderBy('created_at', 'desc')->first();
 
             if ($lastOtp) {
-                $remainingTime = Otp::remainingTime($request->phone, 2); // محاسبه زمان باقی‌مانده
+                $remainingTime = Otp::remainingTime($request->phone, 2);
 
                 if ($remainingTime > 0) {
                     return response()->json([
