@@ -64,14 +64,99 @@ class AuthController extends Controller
      *     )
      * )
      */
+//    public function register(Request $request)
+//    {
+//        // اعتبارسنجی شماره تلفن
+//        $validator = Validator::make($request->all(), [
+//            'phone' => 'required|regex:/^09[0-9]{9}$/|digits:11',
+//        ]);
+//        if ($validator->fails()) {
+//            return response()->json($validator->errors()->toJson(), 400);
+//        }
+//
+//        $otpValidityDuration = 120; // اعتبار OTP به ثانیه
+//        $user = User::query()->where('phone', $request->phone)->first();
+//        $lastOtp = Otp::query()->where('phone', $request->phone)->orderBy('created_at', 'desc')->first();
+//
+//        // اگر آخرین OTP وجود دارد
+//        if ($lastOtp) {
+//            $timeSinceLastOtp = now()->timestamp - $lastOtp->created_at->timestamp;
+//
+//            if ($timeSinceLastOtp < $otpValidityDuration) {
+//                $remainingSeconds = $otpValidityDuration - $timeSinceLastOtp;
+//
+//                // اگر کاربر وجود دارد و پسورد دارد
+//                if ($user && $user->has_password) {
+//                    return response()->json([
+//                        'status' => 200,
+//                        'data' => [
+//                            'phone' => $request->phone,
+//                            'message' => 'این کاربر وجود دارد و می‌توانید با رمز عبور هم وارد شوید.',
+//                            'has_account' => true,
+//                            'has_password' => true,
+//                            'otp_ttl' => $remainingSeconds,
+//                        ],
+//                    ]);
+//                }
+//
+//                // اگر کاربر وجود دارد اما پسورد ندارد
+//                if ($user) {
+//                    return response()->json([
+//                        'status' => 200,
+//                        'data' => [
+//                            'phone' => $request->phone,
+//                            'message' => 'کاربر وجود دارد اما پسورد تنظیم نشده است.',
+//                            'has_account' => true,
+//                            'has_password' => false,
+//                            'otp_ttl' => $remainingSeconds,
+//                        ],
+//                    ]);
+//                }
+//
+//                // اگر کاربر وجود ندارد
+//                return response()->json([
+//                    'status' => 200,
+//                    'data' => [
+//                        'phone' => $request->phone,
+//                        'message' => 'کاربر وجود ندارد و شما می‌توانید ثبت نام کنید.',
+//                        'has_account' => false,
+//                        'has_password' => false,
+//                        'otp_ttl' => $remainingSeconds,
+//                    ],
+//                ]);
+//            }
+//        }
+//
+//        // اگر OTP قبلی منقضی شده یا وجود ندارد، یک OTP جدید تولید کنید
+//        $otp = rand(1000, 9999);
+//        Otp::query()->create([
+//            'phone' => $request->phone,
+//            'otp' => $otp,
+//            'type' => 'register',
+//        ]);
+//
+//        $this->sendOtp($request->phone, $otp);
+//
+//        return response()->json([
+//            'status' => 200,
+//            'data' => [
+//                'phone' => $request->phone,
+//                'message' => 'کد یکبار مصرف جدید ارسال شد.',
+//                'has_account' => (bool) $user,
+//                'has_password' => $user ? $user->has_password : false,
+//                'otp_ttl' => $otpValidityDuration,
+//            ],
+//        ]);
+//    }
     public function register(Request $request)
     {
         // اعتبارسنجی شماره تلفن
         $validator = Validator::make($request->all(), [
             'phone' => 'required|regex:/^09[0-9]{9}$/|digits:11',
         ]);
+
         if ($validator->fails()) {
-            return response()->json($validator->errors()->toJson(), 400);
+            return new BaseDto(BaseDtoStatusEnum::ERROR, 'اعتبارسنجی ناموفق بود', $validator->errors()->toJson());
         }
 
         $otpValidityDuration = 120; // اعتبار OTP به ثانیه
@@ -87,43 +172,43 @@ class AuthController extends Controller
 
                 // اگر کاربر وجود دارد و پسورد دارد
                 if ($user && $user->has_password) {
-                    return response()->json([
-                        'status' => 200,
-                        'data' => [
+                    return new BaseDto(
+                        BaseDtoStatusEnum::OK,
+                        'این کاربر وجود دارد و می‌توانید با رمز عبور هم وارد شوید.', data :
+                        [
                             'phone' => $request->phone,
-                            'message' => 'این کاربر وجود دارد و می‌توانید با رمز عبور هم وارد شوید.',
                             'has_account' => true,
                             'has_password' => true,
-                            'otp_ttl' => $remainingSeconds,
-                        ],
-                    ]);
+                            'otp_ttl' => $remainingSeconds
+                        ]
+                    );
                 }
 
                 // اگر کاربر وجود دارد اما پسورد ندارد
                 if ($user) {
-                    return response()->json([
-                        'status' => 200,
-                        'data' => [
+                    return new BaseDto(
+                        BaseDtoStatusEnum::OK,
+                        'کاربر وجود دارد اما پسورد تنظیم نشده است.', data:
+                        [
                             'phone' => $request->phone,
-                            'message' => 'کاربر وجود دارد اما پسورد تنظیم نشده است.',
                             'has_account' => true,
                             'has_password' => false,
-                            'otp_ttl' => $remainingSeconds,
-                        ],
-                    ]);
+                            'otp_ttl' => $remainingSeconds
+                        ]
+                    );
                 }
 
                 // اگر کاربر وجود ندارد
-                return response()->json([
-                    'status' => 200,
-                    'data' => [
+                return new BaseDto(
+                    BaseDtoStatusEnum::OK,
+                    'کاربر وجود ندارد و شما می‌توانید ثبت نام کنید.', data:
+                    [
                         'phone' => $request->phone,
-                        'message' => 'کاربر وجود ندارد و شما می‌توانید ثبت نام کنید.',
                         'has_account' => false,
                         'has_password' => false,
-                        'otp_ttl' => $remainingSeconds,
-                    ],
-                ]);
+                        'otp_ttl' => $remainingSeconds
+                    ]
+                );
             }
         }
 
@@ -137,17 +222,61 @@ class AuthController extends Controller
 
         $this->sendOtp($request->phone, $otp);
 
-        return response()->json([
-            'status' => 200,
-            'data' => [
+        return new BaseDto(
+            BaseDtoStatusEnum::OK,
+            'کد یکبار مصرف جدید ارسال شد.', data:
+            [
                 'phone' => $request->phone,
-                'message' => 'کد یکبار مصرف جدید ارسال شد.',
-                'has_account' => (bool) $user,
+                'has_account' => (bool)$user,
                 'has_password' => $user ? $user->has_password : false,
-                'otp_ttl' => $otpValidityDuration,
-            ],
-        ]);
+                'otp_ttl' => $otpValidityDuration
+            ]
+        );
     }
+    /**
+     * @OA\Post(
+     *     path="/v1/api/verify-otp",
+     *     summary="Verify your phone for Register or login",
+     *     tags={"Authentication"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"phone"},
+     *             @OA\Property(property="phone", type="string", example="09123456789", description="User's phone number")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="OTP sent or user exists",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="integer", example=200),
+     *             @OA\Property(property="data", type="object",
+     *                 @OA\Property(property="phone", type="string", example="09123456789"),
+     *                 @OA\Property(property="has_account", type="boolean", example=true),
+     *                 @OA\Property(property="has_password", type="boolean", example=false),
+     *                 @OA\Property(property="message", type="string", example="OTP sent."),
+     *                 @OA\Property(property="login_method", type="string", example="otp"),
+     *                 @OA\Property(property="otp_ttl", type="integer", example=120)
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="Validation error",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Invalid phone number format")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=429,
+     *         description="Too many requests",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Please wait 2 minutes before requesting a new OTP."),
+     *             @OA\Property(property="otp_ttl", type="integer", example=100)
+     *         )
+     *     )
+     * )
+     */
     public function verifyOtp(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -191,22 +320,15 @@ class AuthController extends Controller
                 ], 500);
             }
             // پاسخ با توکن JWT
-//            return response()->json([
-//                'status' => '200',
-//                'data' => [
-//                    'token' => $token, // ارسال توکن در پاسخ
-//                    'user Data' => $user, // ارسال اطلاعات کاربر در پاسخ
-//                ],
-//            ]);
             return response()->json(new BaseDto(BaseDtoStatusEnum::OK, data: [
                     'token' => $token, // ارسال توکن در پاسخ
                     'user Data' => $user, // ارسال اطلاعات کاربر در پاسخ
                 ]));
         } else {
-            return response()->json([
+            return response()->json(new BaseDto(BaseDtoStatusEnum::ERROR, data: [
                 'message' => 'کد OTP نامعتبر است یا منقضی شده است.',
                 'status' => 422,
-            ]);
+            ]));
         }
     }
 
