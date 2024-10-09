@@ -37,5 +37,5 @@ class BaseDto implements JsonSerializable
 enum BaseDtoStatusEnum : string
 {
     case OK = 'OK';
-    case ERROR = 'ERROR3';
+    case ERROR = 'ERROR';
 }
