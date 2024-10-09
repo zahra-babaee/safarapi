@@ -180,10 +180,6 @@ class AuthController extends Controller
      */
     public function verifyOtp(Request $request)
     {
-//        $validator = Validator::make($request->all(), [
-//            'phone' => 'required|regex:/^09[0-9]{9}$/|digits:11',
-//            'otp' => 'required|digits:4',
-//        ]);
         $validator = Validator::make($request->all(), [
             'phone' => 'required|regex:/^09[0-9]{9}$/|digits:11',
             'otp' => 'required|digits:4',

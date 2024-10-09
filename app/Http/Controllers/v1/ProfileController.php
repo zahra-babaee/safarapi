@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers\v1;
 
+use App\Dto\BaseDto;
+use App\Dto\BaseDtoStatusEnum;
 use App\Models\Otp;
 use App\Models\Image;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Storage;
@@ -29,25 +32,31 @@ class ProfileController extends Controller
             $avatarUrl = $avatar ? Storage::url($avatar->path) : null;
         }
 
-        return response()->json([
+        return response()->json(new BaseDto(BaseDtoStatusEnum::OK, data:[
             'name' => $user->name,
             'phone' => $user->phone,
             'avatar' => $avatarUrl,
-        ]);
+        ]));
     }
 
     public function updateAvatar(Request $request)
     {
-        // اعتبارسنجی ورودی
         $validator = Validator::make($request->all(), [
             'image' => 'required|image|max:2048',
+        ], [
+            'image.required' => 'عکس نباید خالی باشد.',
+            'image.image' => 'فایل باید یک تصویر معتبر باشد.',
+            'image.max' => 'حجم تصویر نباید بیشتر از 2 مگابایت باشد.',
         ]);
 
         if ($validator->fails()) {
-            return response()->json([
-                'error' => $validator->errors(),
-                'status' => 'error',
-            ], 400);
+            $errors = $validator->errors()->toArray();
+
+            return response()->json(new BaseDto(
+                BaseDtoStatusEnum::ERROR,
+                'خطاهای اعتبارسنجی تصویر رخ داده است.',
+                $errors
+            ), 400);
         }
 
         try {
@@ -76,21 +85,20 @@ class ProfileController extends Controller
             $user->has_avatar = true;
             $user->save();
 
-            return response()->json([
-                'data' => [
+            return response()->json(new BaseDto(BaseDtoStatusEnum::OK, 'عکس با موفقیت بزوررسانی شد',
+                data: [
                     'image' => $filename,
                     'url' => Storage::url($path),
-                    'status' => 'success',
-                ],
-            ]);
+                ]), 200);
+
         } catch (\Exception $e) {
             Log::error("Error updating avatar: " . $e->getMessage());
 
-            return response()->json([
-                'message' => 'خطا در بارگذاری تصویر.',
+            return response()->json(new BaseDto(BaseDtoStatusEnum::ERROR,  'خطا در بارگذاری تصویر.',
+                data:[
                 'error' => $e->getMessage(),
                 'status' => 'error',
-            ], 500);
+            ]), 500);
         }
     }
 
@@ -98,15 +106,28 @@ class ProfileController extends Controller
     {
         $user = auth()->user();
 
-        // اعتبارسنجی ورودی‌ها
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'phone' => 'sometimes|regex:/^09[0-9]{9}$/|digits:11',
-            'profile_picture' => 'sometimes|image|max:2048',
+            'profile_picture' => 'sometimes|image|max:2048'
+        ], [
+            'name.required' => 'نام نباید خالی باشد.',
+            'name.string' => 'نام باید معتبر باشد.',
+            'name.max' => 'نام نباید بیشتر از 255 کاراکتر باشد.',
+            'phone.regex' => 'شماره تلفن باید با 09 شروع شود و 11 رقم باشد.',
+            'phone.digits' => 'شماره تلفن باید دقیقاً 11 رقم باشد.',
+            'profile_picture.image' => 'فایل باید یک تصویر معتبر باشد.',
+            'profile_picture.max' => 'حجم تصویر نباید بیشتر از 2 مگابایت باشد.'
         ]);
 
         if ($validator->fails()) {
-            return response()->json($validator->errors(), 400);
+            $errors = $validator->errors()->toArray();
+
+            return response()->json(new BaseDto(
+                BaseDtoStatusEnum::ERROR,
+                'خطاهای اعتبارسنجی رخ داده است.',
+                $errors
+            ), 400);
         }
 
         // به‌روزرسانی نام کاربر
@@ -146,30 +167,42 @@ class ProfileController extends Controller
             ]);
             $this->sendOtp($request->phone, $otp);
 
-            return response()->json([
-                'status' => 200,
-                'message' => 'کد یکبار مصرف به شماره جدید ارسال شد. ابتدا شماره را تایید کنید.',
+            return response()->json(new BaseDto(BaseDtoStatusEnum::OK, 'کد یکبار مصرف به شماره جدید ارسال شد. ابتدا شماره را تایید کنید.',
+                data:
+                [
                 'requires_verification' => true,
-            ]);
+                ]),200);
         }
 
         // ذخیره تغییرات کاربر
         $user->save();
 
-        return response()->json([
-            'status' => 200,
-            'message' => 'اطلاعات پروفایل با موفقیت به‌روزرسانی شد.',
+        return response()->json(new BaseDto(BaseDtoStatusEnum::OK, 'اطلاعات پروفایل با موفقیت به‌روزرسانی شد.',
+           data:
+            [
             'user' => $user,
-        ]);
+            ]),200);
     }
     public function verifyUpdatePhoneOtp (Request $request)
     {
         $validator = Validator::make($request->all(), [
             'phone' => 'required|regex:/^09[0-9]{9}$/|digits:11',
             'otp' => 'required|digits:4',
+        ], [
+            'phone.required' => 'شماره تلفن نباید خالی باشد.',
+            'phone.regex' => 'شماره تلفن باید با 09 شروع شود و 11 رقم باشد.',
+            'phone.digits' => 'شماره تلفن باید دقیقاً 11 رقم باشد.',
+            'otp.required' => 'کدیکبار مصرف را وارد کنید.',
+            'otp.digits' => 'کدیکبار مصرف باید 4 رقم باشد'
         ]);
-        if($validator->fails()){
-            return response()->json($validator->errors()->toJson(), 400);
+        if ($validator->fails()) {
+            $errors = $validator->errors()->toArray();
+
+            return response()->json(new BaseDto(
+                BaseDtoStatusEnum::ERROR,
+                'خطاهای اعتبارسنجی رخ داده است.',
+                $errors
+            ), 400);
         }
 
         $otpRecord = Otp::query()
@@ -191,20 +224,6 @@ class ProfileController extends Controller
                     $user->update(['has_avatar' => true]);
                 }
                 $user->update(['has_account' => true]);
-
-                $data = [
-                    $message = 'با موفقیت ثبت نام شد.',
-                    'status' => 200,
-                    'type' => 'Registered!',
-                ];
-
-
-            } else {
-                // اگر کاربر قبلاً ثبت‌نام شده باشد
-                $data = [
-                    $message = 'ورود موفقیت‌آمیز با OTP انجام شد.',
-                    'type' => 'Logged in!'
-                ];
             }
 
             $otpRecord->delete();
@@ -212,24 +231,19 @@ class ProfileController extends Controller
             try {
                 $token = JWTAuth::fromUser($user);
             } catch (JWTException $e) {
-                return response()->json([
-                    'message' => 'مشکلی در ایجاد توکن به وجود آمده است.',
-                    'status' => 'error',
-                ], 500);
+                return response()->json(new BaseDto(BaseDtoStatusEnum::ERROR, 'مشکلی در ایجاد توکن به وجود آمده است.'),
+                    500);
             }
             // پاسخ با توکن JWT
-            return response()->json([
-                'status' => '200',
-                'data' => [
+            return response()->json(new BaseDto(BaseDtoStatusEnum::OK,'شماره تلفن با موفقیت بروزرسانی شد.',
+               data:
+                [
                     'token' => $token, // ارسال توکن در پاسخ
                     'user Data' => $user, // ارسال اطلاعات کاربر در پاسخ
-                ],
-            ]);
+                ]),200);
         } else {
-            return response()->json([
-                'message' => 'کد OTP نامعتبر است یا منقضی شده است.',
-                'status' => 422,
-            ]);
+            return response()->json(new BaseDto(BaseDtoStatusEnum::ERROR,'کد OTP نامعتبر است یا منقضی شده است.',
+            ),422);
         }
     }
     public function setPassword(Request $request)
@@ -237,29 +251,31 @@ class ProfileController extends Controller
         // اعتبارسنجی ورودی برای تنظیم رمز عبور
         $validator = Validator::make($request->all(), [
             'password' => [
-                'required',
-                'min:8',
-                'confirmed',
-                'regex:/[a-z]/',
-                'regex:/[A-Z]/',
-                'regex:/[0-9]/',
-                'regex:/[@$!%*#?&]/',
-            ],
+                'required','min:8','confirmed','regex:/[a-z]/','regex:/[A-Z]/','regex:/[0-9]/','regex:/[@$!%*#?&]/'
+                ],
             'old_password' => 'required_if:has_password,true',
+        ], [
+            'password.required' => 'رمز عبور نباید خالی باشد.',
+            'password.min' => 'رمز عبور باید حداقل 8 کاراکتر باشد.',
+            'password.confirmed' => 'رمز عبور و تأیید رمز عبور باید یکسان باشند.',
+            'password.regex' => 'رمز عبور باید شامل حداقل یک حرف کوچک، یک حرف بزرگ، یک عدد و یک کاراکتر خاص باشد.',
+            'old_password.required_if' => 'برای تغییر رمز عبور، باید رمز عبور قبلی را وارد کنید.',
         ]);
 
         if ($validator->fails()) {
-            return response()->json($validator->errors(), 400);
+            return response()->json(new BaseDto(
+                BaseDtoStatusEnum::ERROR,
+                'خطاهای اعتبارسنجی رخ داده است.',
+                $validator->errors()
+            ), 400);
         }
 
-        $user = auth()->user();
+$user = auth()->user();
 
         // چک کردن رمز عبور فعلی
         if ($user->has_password && !Hash::check($request->old_password, $user->password)) {
-            return response()->json([
-                'status' => 400,
-                'message' => 'رمز عبور فعلی نادرست است.',
-            ], 400);
+            return response()->json(new BaseDto(BaseDtoStatusEnum::ERROR,'رمز عبور فعلی نادرست است.'),
+                400);
         }
 
         // تنظیم رمز عبور جدید
@@ -267,10 +283,8 @@ class ProfileController extends Controller
         $user->has_password = true;
         $user->save();
 
-        return response()->json([
-            'status' => 200,
-            'message' => 'رمز عبور با موفقیت تغییر کرد.',
-        ]);
+        return response()->json(new BaseDto(BaseDtoStatusEnum::OK,'رمز عبور با موفقیت تغییر کرد.'),
+            200);
     }
         public function deleteAvatar(Request $request)
     {
@@ -296,20 +310,12 @@ class ProfileController extends Controller
             $user->image_id = null; // یا مقداری که نشان‌دهنده عکس پیش‌فرض است
             $user->save();
 
-            return response()->json([
-                'status' => 200,
-                'data' => [
-                    'message' => 'Profile picture deleted and reverted to default.'
-                ],
-            ]);
+            return response()->json(new BaseDto(BaseDtoStatusEnum::OK, 'عکس پروفایل حذف شد و عکس پیشفرض جایگزین شد.'),
+                200);
         }
 
-        return response()->json([
-            'status' => 404,
-            'data' => [
-                'message' => 'No profile picture found.'
-            ],
-        ]);
+        return response()->json(new BaseDto(BaseDtoStatusEnum::ERROR,'عکس پروفایل پیدا نشد.'),
+            404);
     }
     private function sendOtp($phone, $otp)
     {
