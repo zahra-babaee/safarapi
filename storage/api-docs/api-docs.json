@@ -16,11 +16,13 @@
         "/v1/api/register": {
             "post": {
                 "tags": [
-                    "Authentication"
+                    "احراز هویت"
                 ],
-                "summary": "Register or login a user with OTP",
+                "summary": "ثبت‌نام کاربر و ارسال OTP",
+                "description": "این متد برای ثبت‌نام کاربر جدید و ارسال کد OTP به شماره تلفن او استفاده می‌شود. شماره تلفن باید اعتبارسنجی شود و زمان بین درخواست‌های OTP کنترل می‌شود.",
                 "operationId": "43c603c554b0bd58894476850f421987",
                 "requestBody": {
+                    "description": "شماره تلفن باید وارد شود و باید با 09 شروع و 11 رقم باشد.",
                     "required": true,
                     "content": {
                         "application/json": {
@@ -30,7 +32,7 @@
                                 ],
                                 "properties": {
                                     "phone": {
-                                        "description": "User's phone number",
+                                        "description": "شماره تلفن",
                                         "type": "string",
                                         "example": "09123456789"
                                     }
@@ -42,14 +44,18 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "OTP sent or user exists",
+                        "description": "OTP با موفقیت ارسال شد یا درخواست زودهنگام برای OTP.",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "properties": {
                                         "status": {
-                                            "type": "integer",
-                                            "example": 200
+                                            "type": "string",
+                                            "example": "OK"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "کد ارسال شد."
                                         },
                                         "data": {
                                             "properties": {
@@ -57,23 +63,499 @@
                                                     "type": "string",
                                                     "example": "09123456789"
                                                 },
+                                                "otp_ttl": {
+                                                    "type": "integer",
+                                                    "example": 120
+                                                },
                                                 "has_account": {
                                                     "type": "boolean",
-                                                    "example": true
+                                                    "example": false
                                                 },
                                                 "has_password": {
                                                     "type": "boolean",
                                                     "example": false
                                                 },
-                                                "message": {
+                                                "otp_request_error": {
                                                     "type": "string",
-                                                    "example": "OTP sent."
-                                                },
-                                                "login_method": {
+                                                    "example": "تا 80 ثانیه دیگر نمی‌توانید درخواست جدید بدهید."
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "خطاهای اعتبارسنجی",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "ERROR"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "خطاهای اعتبارسنجی رخ داده است."
+                                        },
+                                        "errors": {
+                                            "properties": {
+                                                "phone": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string",
+                                                        "example": "شماره تلفن نباید خالی باشد."
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "خطای سرور",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "ERROR"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "خطای سرور رخ داده است."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/api/verify-otp": {
+            "post": {
+                "tags": [
+                    "احراز هویت"
+                ],
+                "summary": "اعتبارسنجی کد OTP",
+                "description": "این متد کد OTP ارسال شده به شماره تلفن را اعتبارسنجی می‌کند. اگر کد صحیح باشد و منقضی نشده باشد، کاربر ایجاد یا بازیابی شده و توکن JWT برای کاربر صادر می‌شود.",
+                "operationId": "3b28c2dc4aba34b9616d09408e2e54f5",
+                "requestBody": {
+                    "description": "شماره تلفن باید 11 رقم باشد و کد OTP نیز باید 4 رقم باشد.",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "phone",
+                                    "otp"
+                                ],
+                                "properties": {
+                                    "phone": {
+                                        "description": "شماره تلفن کاربر",
+                                        "type": "string",
+                                        "example": "09123456789"
+                                    },
+                                    "otp": {
+                                        "description": "کد OTP ارسال شده به کاربر",
+                                        "type": "string",
+                                        "example": "1234"
+                                    },
+                                    "name": {
+                                        "description": "نام کاربر",
+                                        "type": "string",
+                                        "example": "John Doe"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "ورود موفقیت آمیز",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "OK"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "ورود موفقیت آمیز"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "token": {
                                                     "type": "string",
-                                                    "example": "otp"
+                                                    "example": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
                                                 },
+                                                "user Data": {
+                                                    "properties": {
+                                                        "phone": {
+                                                            "type": "string",
+                                                            "example": "09123456789"
+                                                        },
+                                                        "name": {
+                                                            "type": "string",
+                                                            "example": "John Doe"
+                                                        },
+                                                        "has_password": {
+                                                            "type": "boolean",
+                                                            "example": false
+                                                        },
+                                                        "has_account": {
+                                                            "type": "boolean",
+                                                            "example": true
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "خطاهای اعتبارسنجی",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "ERROR"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "خطاهای اعتبارسنجی رخ داده است."
+                                        },
+                                        "errors": {
+                                            "properties": {
+                                                "phone": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string",
+                                                        "example": "شماره تلفن نباید خالی باشد."
+                                                    }
+                                                },
+                                                "otp": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string",
+                                                        "example": "کدیکبار مصرف را وارد کنید."
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "کد OTP نامعتبر یا منقضی شده",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "ERROR"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "کد OTP نامعتبر است یا منقضی شده است."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "خطای سرور در تولید توکن JWT",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "ERROR"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "مشکلی در ایجاد توکن به وجود آمده است."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/api/login": {
+            "post": {
+                "tags": [
+                    "احراز هویت"
+                ],
+                "summary": "ورود کاربر با شماره تلفن و رمز عبور",
+                "description": "این متد برای ورود کاربر با استفاده از شماره تلفن و رمز عبور او استفاده می‌شود. اعتبارسنجی شماره تلفن و رمز عبور انجام می‌شود.",
+                "operationId": "c58defdf05536f13d2f422c9e2969586",
+                "requestBody": {
+                    "description": "شماره تلفن و رمز عبور باید وارد شوند.",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "phone",
+                                    "password"
+                                ],
+                                "properties": {
+                                    "phone": {
+                                        "description": "شماره تلفن",
+                                        "type": "string",
+                                        "example": "09123456789"
+                                    },
+                                    "password": {
+                                        "description": "رمز عبور",
+                                        "type": "string",
+                                        "example": "password123"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "ورود موفقیت آمیز و دریافت توکن.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "OK"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "ورود موفقیت آمیز"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "token": {
+                                                    "type": "string",
+                                                    "example": "jwt.token.here"
+                                                },
+                                                "user": {
+                                                    "properties": {
+                                                        "id": {
+                                                            "type": "integer",
+                                                            "example": 1
+                                                        },
+                                                        "phone": {
+                                                            "type": "string",
+                                                            "example": "09123456789"
+                                                        },
+                                                        "name": {
+                                                            "type": "string",
+                                                            "example": "نام کاربر"
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "خطاهای اعتبارسنجی",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "ERROR"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "خطاهای اعتبارسنجی رخ داده است."
+                                        },
+                                        "errors": {
+                                            "properties": {
+                                                "phone": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string",
+                                                        "example": "شماره تلفن نباید خالی باشد."
+                                                    }
+                                                },
+                                                "password": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string",
+                                                        "example": "رمزعبور نباید خالی باشد"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "خطای سرور یا خطا در ایجاد توکن",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "ERROR"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "امکان ایجاد توکن وجود ندارد. لطفاً دوباره تلاش کنید."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/api/logout": {
+            "post": {
+                "tags": [
+                    "احراز هویت"
+                ],
+                "summary": "خروج کاربر",
+                "description": "این متد برای خروج کاربر و باطل کردن توکن JWT استفاده می‌شود.",
+                "operationId": "7a0bae8c78f2509099e07643fc2895ce",
+                "responses": {
+                    "200": {
+                        "description": "خروج موفقیت آمیز",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "OK"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Successfully logged out"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "توکن نامعتبر یا منقضی شده",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "ERROR"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "توکن معتبر نیست یا منقضی شده است."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/api/forget-password": {
+            "post": {
+                "tags": [
+                    "احراز هویت"
+                ],
+                "summary": "فراموشی رمز عبور",
+                "description": "ارسال کد یکبار مصرف (OTP) برای بازنشانی رمز عبور به شماره تلفن کاربر.",
+                "operationId": "08924868a83b64013882817a56ee76bf",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "phone": {
+                                        "description": "شماره تلفن کاربر",
+                                        "type": "string",
+                                        "example": "09123456789"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "کد یکبار مصرف برای بازنشانی رمز عبور ارسال شد",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "OK"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "کد یکبار مصرف برای بازنشانی رمز عبور ارسال شد."
+                                        },
+                                        "data": {
+                                            "properties": {
                                                 "otp_ttl": {
+                                                    "description": "زمان باقیمانده برای اعتبار کد OTP به ثانیه",
                                                     "type": "integer",
                                                     "example": 120
                                                 }
@@ -87,14 +569,50 @@
                         }
                     },
                     "400": {
-                        "description": "Validation error",
+                        "description": "خطاهای اعتبارسنجی رخ داده است",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "ERROR"
+                                        },
                                         "message": {
                                             "type": "string",
-                                            "example": "Invalid phone number format"
+                                            "example": "خطاهای اعتبارسنجی رخ داده است."
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "phone": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string",
+                                                        "example": "شماره تلفن باید دقیقاً 11 رقم باشد."
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "کاربری با این شماره تلفن وجود ندارد",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "ERROR"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "کاربری با این شماره تلفن وجود ندارد."
                                         }
                                     },
                                     "type": "object"
@@ -103,18 +621,48 @@
                         }
                     },
                     "429": {
-                        "description": "Too many requests",
+                        "description": "لطفاً قبل از درخواست جدید دو دقیقه صبر کنید.",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "ERROR"
+                                        },
                                         "message": {
                                             "type": "string",
-                                            "example": "Please wait 2 minutes before requesting a new OTP."
+                                            "example": "لطفاً قبل از درخواست جدید دو دقیقه صبر کنید."
                                         },
-                                        "otp_ttl": {
-                                            "type": "integer",
-                                            "example": 100
+                                        "data": {
+                                            "properties": {
+                                                "otp_ttl": {
+                                                    "description": "زمان باقی‌مانده برای درخواست جدید",
+                                                    "type": "integer",
+                                                    "example": 120
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "خطای سرور",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "ERROR"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "خطایی در سرور رخ داده است."
                                         }
                                     },
                                     "type": "object"
@@ -124,12 +672,791 @@
                     }
                 }
             }
+        },
+        "/v1/api/reset-password": {
+            "post": {
+                "tags": [
+                    "احراز هویت"
+                ],
+                "summary": "بازنشانی رمز عبور",
+                "description": "بازنشانی رمز عبور کاربر با استفاده از کد یکبار مصرف (OTP) ارسال شده به شماره تلفن.",
+                "operationId": "3a1fbcaaee0263925b8bd2f170b283af",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "phone": {
+                                        "description": "شماره تلفن کاربر",
+                                        "type": "string",
+                                        "example": "09123456789"
+                                    },
+                                    "otp": {
+                                        "description": "کد یکبار مصرف ارسال شده به کاربر",
+                                        "type": "string",
+                                        "example": "1234"
+                                    },
+                                    "password": {
+                                        "description": "رمز عبور جدید",
+                                        "type": "string",
+                                        "example": "P@ssw0rd"
+                                    },
+                                    "password_confirmation": {
+                                        "description": "تأیید رمز عبور",
+                                        "type": "string",
+                                        "example": "P@ssw0rd"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "رمز عبور با موفقیت بازنشانی شد",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "OK"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "رمز عبور با موفقیت بازنشانی شد."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "خطاهای اعتبارسنجی رخ داده است",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "ERROR"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "خطاهای اعتبارسنجی رخ داده است."
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "phone": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string",
+                                                        "example": "شماره تلفن باید دقیقاً 11 رقم باشد."
+                                                    }
+                                                },
+                                                "otp": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string",
+                                                        "example": "کد یکبار مصرف باید 4 رقم باشد."
+                                                    }
+                                                },
+                                                "password": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string",
+                                                        "example": "رمز عبور باید حداقل 8 کاراکتر باشد."
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "کد OTP نامعتبر است یا منقضی شده است",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "ERROR"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "کد OTP نامعتبر است یا منقضی شده است."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "خطای سرور",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "ERROR"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "خطایی در سرور رخ داده است."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/profile": {
+            "get": {
+                "tags": [
+                    "پروفایل"
+                ],
+                "summary": "نمایش پروفایل کاربر",
+                "description": "این متد اطلاعات پروفایل کاربر شامل نام، شماره تلفن و عکس پروفایل را نمایش می‌دهد. اگر کاربر عکس پروفایل نداشته باشد، عکس پیش‌فرض نمایش داده می‌شود.",
+                "operationId": "438398992ddfe037e9c830a99542ba9b",
+                "responses": {
+                    "200": {
+                        "description": "اطلاعات پروفایل با موفقیت بازیابی شد.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "OK"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": ""
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "name": {
+                                                    "type": "string",
+                                                    "example": "علی احمدی"
+                                                },
+                                                "phone": {
+                                                    "type": "string",
+                                                    "example": "09123456789"
+                                                },
+                                                "avatar": {
+                                                    "type": "string",
+                                                    "example": "https://your-domain.com/storage/avatars/default.png"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "احراز هویت ناموفق بود.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "ERROR"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "توکن نامعتبر است."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/v1/profile/avatar": {
+            "post": {
+                "tags": [
+                    "پروفایل"
+                ],
+                "summary": "به‌روزرسانی عکس پروفایل کاربر",
+                "description": "این متد برای به‌روزرسانی عکس پروفایل کاربر استفاده می‌شود. عکس جدید باید یک فایل تصویر معتبر باشد و حجم آن نباید از 2 مگابایت بیشتر باشد. در صورت وجود عکس قبلی، آن حذف شده و عکس جدید جایگزین می‌شود.",
+                "operationId": "5bad382ccca77a45d545a2e144de0865",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "required": [
+                                    "image"
+                                ],
+                                "properties": {
+                                    "image": {
+                                        "description": "فایل تصویر پروفایل",
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "عکس پروفایل با موفقیت به‌روزرسانی شد.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "OK"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "عکس با موفقیت به‌روزرسانی شد"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "image": {
+                                                    "type": "string",
+                                                    "example": "unique_image_name.jpg"
+                                                },
+                                                "url": {
+                                                    "type": "string",
+                                                    "example": "https://your-domain.com/storage/profile_photos/unique_image_name.jpg"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "خطاهای اعتبارسنجی تصویر رخ داده است.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "ERROR"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "خطاهای اعتبارسنجی تصویر رخ داده است."
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "خطایی در بارگذاری تصویر رخ داد.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "ERROR"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "خطا در بارگذاری تصویر."
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/v1/profile/update": {
+            "post": {
+                "tags": [
+                    "پروفایل"
+                ],
+                "summary": "به‌روزرسانی پروفایل کاربر",
+                "description": "این متد برای به‌روزرسانی اطلاعات پروفایل کاربر از جمله نام، تصویر پروفایل و شماره تلفن استفاده می‌شود. در صورت تغییر شماره تلفن، کد یکبار مصرف برای تایید ارسال خواهد شد.",
+                "operationId": "73d5e8c6be23b0052df31480a69bc66a",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "description": "نام کاربر",
+                                        "type": "string",
+                                        "example": "علی رضایی"
+                                    },
+                                    "phone": {
+                                        "description": "شماره تلفن جدید",
+                                        "type": "string",
+                                        "example": "09123456789"
+                                    },
+                                    "profile_picture": {
+                                        "description": "تصویر پروفایل جدید",
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "پروفایل با موفقیت به‌روزرسانی شد.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "OK"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "اطلاعات پروفایل با موفقیت به‌روزرسانی شد."
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "user": {
+                                                    "description": "اطلاعات کاربر",
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "خطاهای اعتبارسنجی رخ داده است.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "ERROR"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "خطاهای اعتبارسنجی رخ داده است."
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "خطا در به‌روزرسانی اطلاعات پروفایل.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "ERROR"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "خطایی در به‌روزرسانی اطلاعات رخ داده است."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/v1/profile/verify-phone-otp": {
+            "post": {
+                "tags": [
+                    "پروفایل"
+                ],
+                "summary": "تأیید شماره تلفن با کد OTP",
+                "description": "این متد برای تأیید شماره تلفن کاربر با استفاده از کد یکبار مصرف (OTP) است. در صورت موفقیت، یک توکن JWT برای کاربر تولید می‌شود.",
+                "operationId": "e89509e8b5deba8f52ac78db5ac105f7",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "phone": {
+                                        "description": "شماره تلفن کاربر",
+                                        "type": "string",
+                                        "example": "09123456789"
+                                    },
+                                    "otp": {
+                                        "description": "کد یکبار مصرف",
+                                        "type": "string",
+                                        "example": "1234"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "شماره تلفن با موفقیت بروزرسانی شد.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "OK"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "شماره تلفن با موفقیت بروزرسانی شد."
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "token": {
+                                                    "description": "توکن JWT کاربر",
+                                                    "type": "string"
+                                                },
+                                                "user Data": {
+                                                    "description": "اطلاعات کاربر",
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "خطاهای اعتبارسنجی رخ داده است.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "ERROR"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "خطاهای اعتبارسنجی رخ داده است."
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "کد OTP نامعتبر است یا منقضی شده است.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "ERROR"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "کد OTP نامعتبر است یا منقضی شده است."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "مشکلی در ایجاد توکن به وجود آمده است.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "ERROR"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "مشکلی در ایجاد توکن به وجود آمده است."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/v1/profile/set-password": {
+            "post": {
+                "tags": [
+                    "پروفایل"
+                ],
+                "summary": "تنظیم رمز عبور",
+                "description": "این متد برای تنظیم یا تغییر رمز عبور کاربر استفاده می‌شود. در صورت وجود رمز عبور قبلی، کاربر باید آن را وارد کند.",
+                "operationId": "cb41d6ad87a64d2946b202ce47ecced1",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "password": {
+                                        "description": "رمز عبور جدید",
+                                        "type": "string",
+                                        "example": "NewPassword@123"
+                                    },
+                                    "password_confirmation": {
+                                        "description": "تأیید رمز عبور جدید",
+                                        "type": "string",
+                                        "example": "NewPassword@123"
+                                    },
+                                    "old_password": {
+                                        "description": "رمز عبور قبلی (در صورت داشتن رمز عبور)",
+                                        "type": "string",
+                                        "example": "OldPassword@123"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "رمز عبور با موفقیت ایجاد شد.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "OK"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "رمز عبور با موفقیت ایجاد شد."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "خطاهای اعتبارسنجی رخ داده است.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "ERROR"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "خطاهای اعتبارسنجی رخ داده است."
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "رمز عبور فعلی نادرست است.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "ERROR"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "رمز عبور فعلی نادرست است."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/v1/profile/delete-avatar": {
+            "delete": {
+                "tags": [
+                    "پروفایل"
+                ],
+                "summary": "حذف عکس پروفایل",
+                "description": "این متد برای حذف عکس پروفایل کاربر استفاده می‌شود و در صورت حذف موفق، عکس پیش‌فرض جایگزین می‌شود.",
+                "operationId": "ef7060dcd7a5566a36ff0e2fd467e865",
+                "responses": {
+                    "200": {
+                        "description": "عکس پروفایل با موفقیت حذف شد.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "OK"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "عکس پروفایل حذف شد و عکس پیشفرض جایگزین شد."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "عکس پروفایل پیدا نشد.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "ERROR"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "عکس پروفایل پیدا نشد."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "خطا در حذف عکس پروفایل.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "ERROR"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "خطا در حذف عکس پروفایل."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
         }
     },
     "tags": [
         {
-            "name": "Authentication",
-            "description": "Authentication"
+            "name": "احراز هویت",
+            "description": "احراز هویت"
+        },
+        {
+            "name": "پروفایل",
+            "description": "پروفایل"
         }
     ]
 }

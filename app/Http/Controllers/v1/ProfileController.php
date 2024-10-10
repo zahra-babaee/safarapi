@@ -18,7 +18,38 @@ use Tymon\JWTAuth\Facades\JWTAuth;
 
 class ProfileController extends Controller
 {
-    // متد نمایش عکس پروفایل
+    /**
+     * @OA\Get(
+     *     path="/v1/profile",
+     *     summary="نمایش پروفایل کاربر",
+     *     description="این متد اطلاعات پروفایل کاربر شامل نام، شماره تلفن و عکس پروفایل را نمایش می‌دهد. اگر کاربر عکس پروفایل نداشته باشد، عکس پیش‌فرض نمایش داده می‌شود.",
+     *     tags={"پروفایل"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Response(
+     *         response=200,
+     *         description="اطلاعات پروفایل با موفقیت بازیابی شد.",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="OK"),
+     *             @OA\Property(property="message", type="string", example=""),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="name", type="string", example="علی احمدی"),
+     *                 @OA\Property(property="phone", type="string", example="09123456789"),
+     *                 @OA\Property(property="avatar", type="string", example="https://your-domain.com/storage/avatars/default.png")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="احراز هویت ناموفق بود.",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="ERROR"),
+     *             @OA\Property(property="message", type="string", example="توکن نامعتبر است.")
+     *         )
+     *     )
+     * )
+     */
     public function index()
     {
         $user = auth()->user();
@@ -38,7 +69,57 @@ class ProfileController extends Controller
             'avatar' => $avatarUrl,
         ]));
     }
-
+    /**
+     * @OA\Post(
+     *     path="/v1/profile/avatar",
+     *     summary="به‌روزرسانی عکس پروفایل کاربر",
+     *     description="این متد برای به‌روزرسانی عکس پروفایل کاربر استفاده می‌شود. عکس جدید باید یک فایل تصویر معتبر باشد و حجم آن نباید از 2 مگابایت بیشتر باشد. در صورت وجود عکس قبلی، آن حذف شده و عکس جدید جایگزین می‌شود.",
+     *     tags={"پروفایل"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\MediaType(
+     *             mediaType="multipart/form-data",
+     *             @OA\Schema(
+     *                 @OA\Property(property="image", type="string", format="binary", description="فایل تصویر پروفایل"),
+     *                 required={"image"}
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="عکس پروفایل با موفقیت به‌روزرسانی شد.",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="OK"),
+     *             @OA\Property(property="message", type="string", example="عکس با موفقیت به‌روزرسانی شد"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="image", type="string", example="unique_image_name.jpg"),
+     *                 @OA\Property(property="url", type="string", example="https://your-domain.com/storage/profile_photos/unique_image_name.jpg")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="خطاهای اعتبارسنجی تصویر رخ داده است.",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="ERROR"),
+     *             @OA\Property(property="message", type="string", example="خطاهای اعتبارسنجی تصویر رخ داده است."),
+     *             @OA\Property(property="data", type="object")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="خطایی در بارگذاری تصویر رخ داد.",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="ERROR"),
+     *             @OA\Property(property="message", type="string", example="خطا در بارگذاری تصویر."),
+     *             @OA\Property(property="data", type="object")
+     *         )
+     *     )
+     * )
+     */
     public function updateAvatar(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -101,7 +182,53 @@ class ProfileController extends Controller
             ]), 500);
         }
     }
-
+    /**
+     * @OA\Post(
+     *     path="/v1/profile/update",
+     *     summary="به‌روزرسانی پروفایل کاربر",
+     *     description="این متد برای به‌روزرسانی اطلاعات پروفایل کاربر از جمله نام، تصویر پروفایل و شماره تلفن استفاده می‌شود. در صورت تغییر شماره تلفن، کد یکبار مصرف برای تایید ارسال خواهد شد.",
+     *     tags={"پروفایل"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="name", type="string", description="نام کاربر", example="علی رضایی"),
+     *             @OA\Property(property="phone", type="string", description="شماره تلفن جدید", example="09123456789"),
+     *             @OA\Property(property="profile_picture", type="string", format="binary", description="تصویر پروفایل جدید")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="پروفایل با موفقیت به‌روزرسانی شد.",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="OK"),
+     *             @OA\Property(property="message", type="string", example="اطلاعات پروفایل با موفقیت به‌روزرسانی شد."),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="user", type="object", description="اطلاعات کاربر")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="خطاهای اعتبارسنجی رخ داده است.",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="ERROR"),
+     *             @OA\Property(property="message", type="string", example="خطاهای اعتبارسنجی رخ داده است."),
+     *             @OA\Property(property="data", type="object")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="خطا در به‌روزرسانی اطلاعات پروفایل.",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="ERROR"),
+     *             @OA\Property(property="message", type="string", example="خطایی در به‌روزرسانی اطلاعات رخ داده است.")
+     *         )
+     *     )
+     * )
+     */
     public function updateProfile(Request $request)
     {
         $user = auth()->user();
@@ -183,6 +310,61 @@ class ProfileController extends Controller
             'user' => $user,
             ]),200);
     }
+    /**
+     * @OA\Post(
+     *     path="/v1/profile/verify-phone-otp",
+     *     summary="تأیید شماره تلفن با کد OTP",
+     *     description="این متد برای تأیید شماره تلفن کاربر با استفاده از کد یکبار مصرف (OTP) است. در صورت موفقیت، یک توکن JWT برای کاربر تولید می‌شود.",
+     *     tags={"پروفایل"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="phone", type="string", description="شماره تلفن کاربر", example="09123456789"),
+     *             @OA\Property(property="otp", type="string", description="کد یکبار مصرف", example="1234")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="شماره تلفن با موفقیت بروزرسانی شد.",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="OK"),
+     *             @OA\Property(property="message", type="string", example="شماره تلفن با موفقیت بروزرسانی شد."),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="token", type="string", description="توکن JWT کاربر"),
+     *                 @OA\Property(property="user Data", type="object", description="اطلاعات کاربر")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="خطاهای اعتبارسنجی رخ داده است.",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="ERROR"),
+     *             @OA\Property(property="message", type="string", example="خطاهای اعتبارسنجی رخ داده است."),
+     *             @OA\Property(property="data", type="object")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="کد OTP نامعتبر است یا منقضی شده است.",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="ERROR"),
+     *             @OA\Property(property="message", type="string", example="کد OTP نامعتبر است یا منقضی شده است.")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="مشکلی در ایجاد توکن به وجود آمده است.",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="ERROR"),
+     *             @OA\Property(property="message", type="string", example="مشکلی در ایجاد توکن به وجود آمده است.")
+     *         )
+     *     )
+     * )
+     */
     public function verifyUpdatePhoneOtp (Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -246,6 +428,48 @@ class ProfileController extends Controller
             ),422);
         }
     }
+    /**
+     * @OA\Post(
+     *     path="/v1/profile/set-password",
+     *     summary="تنظیم رمز عبور",
+     *     description="این متد برای تنظیم یا تغییر رمز عبور کاربر استفاده می‌شود. در صورت وجود رمز عبور قبلی، کاربر باید آن را وارد کند.",
+     *     tags={"پروفایل"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="password", type="string", description="رمز عبور جدید", example="NewPassword@123"),
+     *             @OA\Property(property="password_confirmation", type="string", description="تأیید رمز عبور جدید", example="NewPassword@123"),
+     *             @OA\Property(property="old_password", type="string", description="رمز عبور قبلی (در صورت داشتن رمز عبور)", example="OldPassword@123")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="رمز عبور با موفقیت ایجاد شد.",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="OK"),
+     *             @OA\Property(property="message", type="string", example="رمز عبور با موفقیت ایجاد شد.")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="خطاهای اعتبارسنجی رخ داده است.",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="ERROR"),
+     *             @OA\Property(property="message", type="string", example="خطاهای اعتبارسنجی رخ داده است."),
+     *             @OA\Property(property="data", type="object")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="رمز عبور فعلی نادرست است.",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="ERROR"),
+     *             @OA\Property(property="message", type="string", example="رمز عبور فعلی نادرست است.")
+     *         )
+     *     )
+     * )
+     */
     public function setPassword(Request $request)
     {
         // اعتبارسنجی ورودی برای تنظیم رمز عبور
@@ -283,10 +507,43 @@ $user = auth()->user();
         $user->has_password = true;
         $user->save();
 
-        return response()->json(new BaseDto(BaseDtoStatusEnum::OK,'رمز عبور با موفقیت تغییر کرد.'),
+        return response()->json(new BaseDto(BaseDtoStatusEnum::OK,'رمز عبور با موفقیت ایجاد شد.'),
             200);
     }
-        public function deleteAvatar(Request $request)
+    /**
+     * @OA\Delete(
+     *     path="/v1/profile/delete-avatar",
+     *     summary="حذف عکس پروفایل",
+     *     description="این متد برای حذف عکس پروفایل کاربر استفاده می‌شود و در صورت حذف موفق، عکس پیش‌فرض جایگزین می‌شود.",
+     *     tags={"پروفایل"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Response(
+     *         response=200,
+     *         description="عکس پروفایل با موفقیت حذف شد.",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="OK"),
+     *             @OA\Property(property="message", type="string", example="عکس پروفایل حذف شد و عکس پیشفرض جایگزین شد.")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="عکس پروفایل پیدا نشد.",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="ERROR"),
+     *             @OA\Property(property="message", type="string", example="عکس پروفایل پیدا نشد.")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="خطا در حذف عکس پروفایل.",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="ERROR"),
+     *             @OA\Property(property="message", type="string", example="خطا در حذف عکس پروفایل.")
+     *         )
+     *     )
+     * )
+     */
+    public function deleteAvatar(Request $request)
     {
         // دریافت کاربر جاری
         $user = $request->user();
@@ -321,9 +578,9 @@ $user = auth()->user();
     {
         // ارسال OTP به شماره تلفن
         $curl = curl_init();
-        $apikey = '493036347A343565484D3767455769504867546F636A7A30664D6C36316F724E38654E2B42324A2F4166633D'; // کلید API شما
+        $apikey = ''; // کلید API شما
         $message = urlencode("کد یکبار مصرف برای ورود شما: $otp");
-        $sender = '100090003'; // شماره فرستنده شما
+        $sender = ''; // شماره فرستنده شما
         $url = "https://api.kavenegar.com/v1/$apikey/sms/send.json?receptor=$phone&sender=$sender&message=$message";
 
         curl_setopt_array($curl, [
