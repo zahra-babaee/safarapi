@@ -64,4 +64,11 @@ class User extends Authenticatable implements JWTSubject
     {
         return $this->belongsTo(Image::class, 'image_id');
     }
+
+    public function notifications()
+    {
+        return $this->belongsToMany(Notification::class, 'user_notification')
+            ->withPivot('is_read')
+            ->withTimestamps();
+    }
 }
