@@ -823,6 +823,112 @@
                 }
             }
         },
+        "/v1/notifications": {
+            "get": {
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "دریافت اعلانات کاربر",
+                "operationId": "6637ad68030edb2819de6b2370b7ac7e",
+                "responses": {
+                    "200": {
+                        "description": "اعلانات با موفقیت دریافت شد"
+                    },
+                    "401": {
+                        "description": "کاربر احراز هویت نشده"
+                    },
+                    "403": {
+                        "description": "دسترسی ممنوع"
+                    }
+                }
+            }
+        },
+        "/v1/notifications/{id}/read": {
+            "put": {
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "خواندن اعلان خاص",
+                "operationId": "303ca5ba3aa1044f86b48b48125ae33f",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID اعلان",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "اعلان به عنوان خوانده شده علامت‌گذاری شد"
+                    },
+                    "404": {
+                        "description": "اعلان پیدا نشد"
+                    },
+                    "400": {
+                        "description": "این اعلان قبلاً خوانده شده است"
+                    }
+                }
+            }
+        },
+        "/v1/notifications/send": {
+            "post": {
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "ارسال اعلان",
+                "operationId": "b55fda9c988c2ac884431bd93ff98e2e",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "user_id",
+                                    "notification_id"
+                                ],
+                                "properties": {
+                                    "user_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "notification_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "اعلان با موفقیت ارسال شد"
+                    },
+                    "400": {
+                        "description": "خطاهای اعتبارسنجی رخ داد"
+                    }
+                }
+            }
+        },
+        "/v1/notifications/old": {
+            "delete": {
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "حذف اعلانات قدیمی",
+                "operationId": "241fe274a0e89e7f8d0e50cc4d84d067",
+                "responses": {
+                    "200": {
+                        "description": "اعلانات قدیمی با موفقیت حذف شد"
+                    }
+                }
+            }
+        },
         "/v1/profile": {
             "get": {
                 "tags": [
@@ -1453,6 +1559,10 @@
         {
             "name": "احراز هویت",
             "description": "احراز هویت"
+        },
+        {
+            "name": "Notifications",
+            "description": "Notifications"
         },
         {
             "name": "پروفایل",

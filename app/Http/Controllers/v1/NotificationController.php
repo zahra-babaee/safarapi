@@ -13,7 +13,25 @@ use Illuminate\Support\Facades\Validator;
 
 class NotificationController extends Controller
 {
-    // نمایش اعلانات کاربر
+    /**
+     * @OA\Get(
+     *     path="/v1/notifications",
+     *     tags={"Notifications"},
+     *     summary="دریافت اعلانات کاربر",
+     *     @OA\Response(
+     *         response=200,
+     *         description="اعلانات با موفقیت دریافت شد",
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="کاربر احراز هویت نشده"
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="دسترسی ممنوع"
+     *     )
+     * )
+     */
     public function index(Request $request)
     {
         $user = Auth::user();
@@ -34,7 +52,32 @@ class NotificationController extends Controller
         ));
     }
 
-    // خواندن اعلان خاص
+    /**
+     * @OA\Put(
+     *     path="/v1/notifications/{id}/read",
+     *     tags={"Notifications"},
+     *     summary="خواندن اعلان خاص",
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         description="ID اعلان",
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="اعلان به عنوان خوانده شده علامت‌گذاری شد",
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="اعلان پیدا نشد"
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="این اعلان قبلاً خوانده شده است"
+     *     )
+     * )
+     */
     public function markAsRead(Request $request, $id)
     {
         $user = Auth::user();
@@ -67,7 +110,29 @@ class NotificationController extends Controller
         ));
     }
 
-    // ارسال اعلان
+    /**
+     * @OA\Post(
+     *     path="/v1/notifications/send",
+     *     tags={"Notifications"},
+     *     summary="ارسال اعلان",
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"user_id", "notification_id"},
+     *             @OA\Property(property="user_id", type="integer", example=1),
+     *             @OA\Property(property="notification_id", type="integer", example=1)
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="اعلان با موفقیت ارسال شد",
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="خطاهای اعتبارسنجی رخ داد"
+     *     )
+     * )
+     */
     public function sendNotification(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -95,7 +160,7 @@ class NotificationController extends Controller
             ), 400);
         }
 
-        $userNotification = UserNotification::create([
+        $userNotification = UserNotification::query()->create([
             'user_id' => $request->user_id,
             'notification_id' => $request->notification_id,
             'is_read' => false,
@@ -108,14 +173,24 @@ class NotificationController extends Controller
         ), 201);
     }
 
-    // حذف اعلانات قدیمی
+    /**
+     * @OA\Delete(
+     *     path="/v1/notifications/old",
+     *     tags={"Notifications"},
+     *     summary="حذف اعلانات قدیمی",
+     *     @OA\Response(
+     *         response=200,
+     *         description="اعلانات قدیمی با موفقیت حذف شد",
+     *     )
+     * )
+     */
     public function deleteOldNotifications()
     {
         // تاریخ 30 روز پیش
         $dateThreshold = now()->subDays(30);
 
         // حذف اعلانات قدیمی
-        UserNotification::where('created_at', '<', $dateThreshold)->delete();
+        UserNotification::query()->where('created_at', '<', $dateThreshold)->delete();
 
         return response()->json(new BaseDto(
             BaseDtoStatusEnum::OK,
