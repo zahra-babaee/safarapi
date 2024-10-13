@@ -40,6 +40,7 @@ class ArticleController extends Controller
      *         description="خطاهای اعتبارسنجی رخ داده است.",
      *     )
      * )
+     * @throws ValidationException
      */
     public function store(Request $request)
     {
@@ -47,20 +48,18 @@ class ArticleController extends Controller
         $validator = Validator::make($request->all(), [
             'title' => 'required|string|max:255',
             'description' => 'required', // متن مقاله
-            'category_id' => 'required|exists:categories,id',
+            'category_id' => 'exists:categories,id',
             'has_photo' => 'nullable|boolean',
             'images' => 'array', // افزودن اعتبارسنجی برای آرایه تصاویر
-            'images.*' => 'url' // هر آدرس تصویر باید یک URL معتبر باشد
+            'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048'
         ], [
             'title.required' => 'عنوان نباید خالی باشد.',
             'title.string' => 'عنوان باید رشته باشد.',
             'title.max' => 'عنوان باید حداکثر 255 کاراکتر باشد.',
             'description.required' => 'متن نباید خالی باشد.',
-            'category_id.required' => 'دسته‌بندی نباید خالی باشد.',
             'category_id.exists' => 'دسته‌بندی انتخاب شده معتبر نیست.',
             'has_photo.boolean' => 'مقدار عکس باید به صورت صحیح/غلط باشد.',
             'images.array' => 'تصاویر باید یک آرایه باشند.',
-            'images.*.url' => 'هر تصویر باید یک URL معتبر باشد.',
         ]);
 
         if ($validator->fails()) {
@@ -77,9 +76,10 @@ class ArticleController extends Controller
         $validatedData = $validator->validated();
 
         // اضافه کردن آدرس تصاویر به متن مقاله
-        if (isset($validatedData['images'])) {
-            foreach ($validatedData['images'] as $imageUrl) {
-                $validatedData['description'] .= '<img src="' . $imageUrl . '" alt="Image">';
+        if ($request->hasFile('images')) {
+            foreach ($request->file('images') as $image) {
+                $imagePath = $image->store('images', 'public');
+                $validatedData['description'] .= '<img src="' . asset('storage/' . $imagePath) . '" alt="Image">';
             }
         }
 
@@ -90,7 +90,7 @@ class ArticleController extends Controller
             'category_id' => $validatedData['category_id'],
             'user_id' => auth()->id(), // نویسنده مقاله
             'status' => 'pending', // وضعیت در انتظار تایید
-            'has_photo' => $validatedData['has_photo'] ?? false,
+            'has_photo' => isset($validatedData['images']) && count($validatedData['images']) > 0,
         ]);
 
         return response()->json(new BaseDto(
@@ -99,7 +99,6 @@ class ArticleController extends Controller
             $article
         ), 201);
     }
-
     /**
      * @throws ValidationException
      */
