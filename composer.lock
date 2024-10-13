@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "d5b205990e2bb0352bdf982ac2ad1156",
+    "content-hash": "7bc83dc3a4844d81a91081a0881d51dd",
     "packages": [
         {
             "name": "brick/math",
@@ -3517,6 +3517,68 @@
                 }
             ],
             "time": "2024-04-27T21:32:50+00:00"
+        },
+        {
+            "name": "salibhdr/typhoon-iran-cities",
+            "version": "3.0.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/SaliBhdr/typhoon-iran-cities.git",
+                "reference": "2789a3f42ac70889713b5746e61bcc3f8d9f00c2"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/SaliBhdr/typhoon-iran-cities/zipball/2789a3f42ac70889713b5746e61bcc3f8d9f00c2",
+                "reference": "2789a3f42ac70889713b5746e61bcc3f8d9f00c2",
+                "shasum": ""
+            },
+            "require": {
+                "laravel/framework": ">=5.0",
+                "php": ">=5.6.0"
+            },
+            "type": "package",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "SaliBhdr\\TyphoonIranCities\\IranCitiesServiceProvider"
+                    ],
+                    "aliases": []
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "SaliBhdr\\TyphoonIranCities\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Salar Bahador",
+                    "email": "bahador.salar@gmail.com"
+                }
+            ],
+            "description": "A laravel package for importing all regions such as provinces, counties, cities, city districts, rural districts and villages of iran into database accurately",
+            "keywords": [
+                "city",
+                "city-district",
+                "county",
+                "iran",
+                "laravel",
+                "locations",
+                "province",
+                "regions",
+                "rural-district",
+                "salibhdr",
+                "village"
+            ],
+            "support": {
+                "issues": "https://github.com/SaliBhdr/typhoon-iran-cities/issues",
+                "source": "https://github.com/SaliBhdr/typhoon-iran-cities/tree/3.0.1"
+            },
+            "time": "2021-09-18T06:13:55+00:00"
         },
         {
             "name": "swagger-api/swagger-ui",

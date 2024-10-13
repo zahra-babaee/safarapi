@@ -408,11 +408,15 @@ class AuthController extends Controller
      *     description="این متد برای خروج کاربر و باطل کردن توکن JWT استفاده می‌شود.",
      *     tags={"احراز هویت"},
      *
+     *     @OA\SecurityScheme(
+     *         securityScheme="bearerAuth",
+     *         type="http",
+     *         scheme="bearer",
+     *         bearerFormat="JWT"
+     *     ),
+     *
      *     @OA\RequestBody(
-     *          required=true,
-     *          @OA\JsonContent(
-     *              @OA\Property(property="token", type="string", example="your_jwt_token_here")
-     *          )
+     *          required=false
      *      ),
      *
      *     @OA\Response(
@@ -431,7 +435,8 @@ class AuthController extends Controller
      *             @OA\Property(property="status", type="string", example="ERROR"),
      *             @OA\Property(property="message", type="string", example="توکن معتبر نیست یا منقضی شده است.")
      *         )
-     *     )
+     *     ),
+     *     security={{"bearerAuth":{}}}
      * )
      */
     public function logout(Request $request)
