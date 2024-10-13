@@ -15,6 +15,34 @@ class ArticleController extends Controller
     /**
      * @throws ValidationException
      */
+    /**
+     * @OA\Post(
+     *     path="/api/v1/articles",
+     *     summary="ثبت مقاله",
+     *     tags={"مقالات"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"title", "description", "category_id"},
+     *             @OA\Property(property="title", type="string", example="عنوان مقاله"),
+     *             @OA\Property(property="description", type="string", example="متن مقاله"),
+     *             @OA\Property(property="category_id", type="integer", example=1),
+     *             @OA\Property(property="has_photo", type="boolean", example=true),
+     *             @OA\Property(property="images", type="array", @OA\Items(type="string")),
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="مقاله با موفقیت ثبت شد.",
+     *         @OA\JsonContent(ref="#/components/schemas/BaseDto")
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="خطاهای اعتبارسنجی رخ داده است.",
+     *         @OA\JsonContent(ref="#/components/schemas/BaseDto")
+     *     )
+     * )
+     */
     public function store(Request $request)
     {
         // اعتبارسنجی داده‌ها
@@ -77,6 +105,40 @@ class ArticleController extends Controller
     /**
      * @throws ValidationException
      */
+    /**
+     * @OA\Put(
+     *     path="/api/v1/articles/{articleId}",
+     *     summary="به‌روزرسانی مقاله",
+     *     tags={"مقالات"},
+     *     @OA\Parameter(
+     *         name="articleId",
+     *         in="path",
+     *         required=true,
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"title", "description", "category_id"},
+     *             @OA\Property(property="title", type="string", example="عنوان مقاله"),
+     *             @OA\Property(property="description", type="string", example="متن مقاله"),
+     *             @OA\Property(property="category_id", type="integer", example=1),
+     *             @OA\Property(property="has_photo", type="boolean", example=true),
+     *             @OA\Property(property="images", type="array", @OA\Items(type="string")),
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="مقاله با موفقیت به‌روزرسانی شد.",
+     *         @OA\JsonContent(ref="#/components/schemas/BaseDto")
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="خطاهای اعتبارسنجی رخ داده است.",
+     *         @OA\JsonContent(ref="#/components/schemas/BaseDto")
+     *     )
+     * )
+     */
     public function update(Request $request, $articleId)
     {
         // اعتبارسنجی داده‌ها
@@ -134,7 +196,23 @@ class ArticleController extends Controller
             $article
         ), 200);
     }
-
+    /**
+     * @OA\Delete(
+     *     path="/api/v1/articles/{articleId}",
+     *     summary="حذف مقاله",
+     *     tags={"مقالات"},
+     *     @OA\Parameter(
+     *         name="articleId",
+     *         in="path",
+     *         required=true,
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Response(
+     *         response=204,
+     *         description="مقاله با موفقیت حذف شد."
+     *     )
+     * )
+     */
     public function destroy($articleId)
     {
         // پیدا کردن مقاله و حذف آن
@@ -146,7 +224,18 @@ class ArticleController extends Controller
             'مقاله با موفقیت حذف شد.'
         ), 204);
     }
-
+    /**
+     * @OA\Get(
+     *     path="/api/v1/articles/published",
+     *     summary="دریافت مقالات منتشر شده",
+     *     tags={"مقالات"},
+     *     @OA\Response(
+     *         response=200,
+     *         description="لیست مقالات منتشر شده با موفقیت بازیابی شد.",
+     *         @OA\JsonContent(ref="#/components/schemas/BaseDto")
+     *     )
+     * )
+     */
     public function getPublishedArticles()
     {
         $articles = Article::query()->where('status', 'published')->with('category')->get();
@@ -157,7 +246,18 @@ class ArticleController extends Controller
             $articles
         ));
     }
-
+    /**
+     * @OA\Get(
+     *     path="/api/v1/articles/pending",
+     *     summary="دریافت مقالات در حال انتظار تایید",
+     *     tags={"مقالات"},
+     *     @OA\Response(
+     *         response=200,
+     *         description="لیست مقالات در حال انتظار تایید با موفقیت بازیابی شد.",
+     *         @OA\JsonContent(ref="#/components/schemas/BaseDto")
+     *     )
+     * )
+     */
     public function getPendingArticles()
     {
         $userId = auth()->id();
