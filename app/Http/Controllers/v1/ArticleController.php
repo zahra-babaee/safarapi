@@ -9,6 +9,7 @@ use App\Models\Article;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
+use Mews\Purifier\Facades\Purifier;
 
 class ArticleController extends Controller
 {
@@ -42,24 +43,19 @@ class ArticleController extends Controller
      * )
      * @throws ValidationException
      */
+    /**
+     * @throws ValidationException
+     */
     public function store(Request $request)
     {
         // اعتبارسنجی داده‌ها
         $validator = Validator::make($request->all(), [
             'title' => 'required|string|max:255',
-            'description' => 'required', // متن مقاله
+            'description' => 'required|string',
             'category_id' => 'exists:categories,id',
             'has_photo' => 'nullable|boolean',
-            'images' => 'array', // افزودن اعتبارسنجی برای آرایه تصاویر
+            'images' => 'array',
             'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048'
-        ], [
-            'title.required' => 'عنوان نباید خالی باشد.',
-            'title.string' => 'عنوان باید رشته باشد.',
-            'title.max' => 'عنوان باید حداکثر 255 کاراکتر باشد.',
-            'description.required' => 'متن نباید خالی باشد.',
-            'category_id.exists' => 'دسته‌بندی انتخاب شده معتبر نیست.',
-            'has_photo.boolean' => 'مقدار عکس باید به صورت صحیح/غلط باشد.',
-            'images.array' => 'تصاویر باید یک آرایه باشند.',
         ]);
 
         if ($validator->fails()) {
@@ -72,11 +68,11 @@ class ArticleController extends Controller
             ), 400);
         }
 
-        // دریافت داده‌های اعتبارسنجی‌شده
+        // پاکسازی کدهای HTML در توضیحات
         $validatedData = $validator->validated();
+        $validatedData['description'] = Purifier::clean($validatedData['description']);
 
-        // اضافه کردن آدرس تصاویر به متن مقاله
-        if ($request->hasFile('images')) {
+        if ($request->has('images')) {
             foreach ($request->file('images') as $image) {
                 $imagePath = $image->store('images', 'public');
                 $validatedData['description'] .= '<img src="' . asset('storage/' . $imagePath) . '" alt="Image">';
@@ -88,9 +84,9 @@ class ArticleController extends Controller
             'title' => $validatedData['title'],
             'description' => $validatedData['description'],
             'category_id' => $validatedData['category_id'],
-            'user_id' => auth()->id(), // نویسنده مقاله
-            'status' => 'pending', // وضعیت در انتظار تایید
-            'has_photo' => isset($validatedData['images']) && count($validatedData['images']) > 0,
+            'user_id' => auth()->id(),
+            'status' => 'pending',
+            'has_photo' => $validatedData['has_photo'] ?? false,
         ]);
 
         return response()->json(new BaseDto(
