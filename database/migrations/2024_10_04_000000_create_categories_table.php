@@ -13,7 +13,9 @@ return new class extends Migration
     {
         Schema::create('categories', function (Blueprint $table) {
             $table->id();
-            $table->string('title');
+            $table->string('city');
+            $table->string('province');
+            $table->enum('attraction_type', ['natural', 'historical', 'cultural', 'tourism', 'religious']);
             $table->timestamps();
         });
     }

@@ -372,7 +372,7 @@ class ProfileController extends Controller
             'otp' => 'required|digits:4',
         ], [
             'phone.required' => 'شماره تلفن نباید خالی باشد.',
-            'phone.regex' => 'شماره تلفن باید با 09 شروع شود و 11 رقم باشد.',
+            'phone.regex' => 'شماره تلفن باید با 09 شروث شود و 11 رقم باشد.',
             'phone.digits' => 'شماره تلفن باید دقیقاً 11 رقم باشد.',
             'otp.required' => 'کدیکبار مصرف را وارد کنید.',
             'otp.digits' => 'کدیکبار مصرف باید 4 رقم باشد'

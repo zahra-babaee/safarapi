@@ -1,5 +1,4 @@
 <?php
-
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
@@ -11,36 +10,56 @@ class NotificationSeeder extends Seeder
     {
         $notifications = [
             [
-                'description' => 'خوش آمدید',
+                'title' => 'خوش آمدید',
+                'description' => 'به سایت ما خوش آمدید.',
+                'type' => 'welcome',
             ],
             [
-                'description' => 'لطفا پروفایل خود را کامل کنید',
+                'title' => 'تکمیل پروفایل',
+                'description' => 'لطفا حساب کاربری خود را کامل کنید.',
+                'type' => 'profile_completion',
             ],
             [
-                'description' => 'شماره با موفقیت تغییر کرد',
+                'title' => 'شماره تغییر کرد',
+                'description' => 'شماره شما با موفقیت تغییر کرد.',
+                'type' => 'phone_change',
             ],
             [
-                'description' => 'رمز عبور با موفقیت تغییر کرد',
+                'title' => 'تغییر رمز عبور',
+                'description' => 'رمز عبور شما با موفقیت تغییر کرد.',
+                'type' => 'password_change',
             ],
             [
-                'description' => 'آواتار با موفقیت تغییر کرد',
+                'title' => 'تغییر آواتار',
+                'description' => 'آواتار شما با موفقیت تغییر کرد.',
+                'type' => 'avatar_change',
             ],
             [
-                'description' => 'مقاله شما در صف انتظار است',
+                'title' => 'مقاله در صف انتظار',
+                'description' => 'مقاله شما در صف انتظار قرار گرفته است.',
+                'type' => 'article_pending',
             ],
             [
-                'description' => 'مقاله شما رد شد',
+                'title' => 'مقاله رد شد',
+                'description' => 'مقاله شما رد شده است.',
+                'type' => 'article_rejected',
             ],
             [
-                'description' => 'مقاله شما تایید شد',
+                'title' => 'مقاله تایید شد',
+                'description' => 'مقاله شما تایید شده است.',
+                'type' => 'article_approved',
             ],
             [
-                'description' => 'مقاله شما منتشر شد',
-            ],
+                'title' => 'مقاله منتشر شد',
+                'description' => 'مقاله شما منتشر شده است.',
+                'type' => 'article_published',
+            ]
         ];
 
+        // ثبت اعلانات در دیتابیس
         foreach ($notifications as $notification) {
             Notification::query()->create($notification);
         }
     }
 }
+

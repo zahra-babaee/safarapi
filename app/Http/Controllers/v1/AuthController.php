@@ -262,7 +262,7 @@ class AuthController extends Controller
 
         if ($otpRecord) {
             $user = User::query()->firstOrCreate([
-                'phone' => $request->get('phone'),
+                'phone' => $request->phone,
                 'has_password' => false,
                 'name'=> $request->name,
             ]);
@@ -504,64 +504,6 @@ class AuthController extends Controller
      *     )
      * )
      */
-//    public function forgetPassword(Request $request)
-//    {
-//        $validator = Validator::make($request->all(), [
-//            'phone' => 'required|regex:/^09[0-9]{9}$/|digits:11',
-//        ], [
-//            'phone.required' => 'شماره تلفن نباید خالی باشد.',
-//            'phone.regex' => 'شماره تلفن باید با 09 شروع شود و 11 رقم باشد.',
-//            'phone.digits' => 'شماره تلفن باید دقیقاً 11 رقم باشد.'
-//        ]);
-//
-//        if ($validator->fails()) {
-//            $errors = $validator->errors()->toArray();
-//
-//            return response()->json(new BaseDto(
-//                BaseDtoStatusEnum::ERROR,
-//                'خطاهای اعتبارسنجی رخ داده است.',
-//                $errors
-//            ), 400);
-//        }
-//
-//        // بررسی وجود کاربر
-//        $user = User::query()->where('phone', $request->phone)->first();
-//
-//        if (!$user) {
-//            return response()->json(new BaseDto(BaseDtoStatusEnum::ERROR,'کاربری با این شماره تلفن وجود ندارد.'),404);
-//        }
-//        else{
-//            $lastOtp = Otp::query()->where('phone', $request->phone)->orderBy('created_at', 'desc')->first();
-//
-//            if ($lastOtp) {
-//                $remainingTime = Otp::remainingTime($request->phone, 2);
-//
-//                if ($remainingTime > 0) {
-//                    return response()->json(new BaseDto(BaseDtoStatusEnum::ERROR,'لطفاً قبل از درخواست جدید دو دقیقه صبر کنید.',
-//                        data:[
-//                        'otp_ttl' => $remainingTime,
-//                    ]),429);
-//                }
-//        }
-//            // ایجاد کد OTP و ذخیره آن
-//            $otp = rand(1000, 9999);
-//            Otp::query()->create([
-//                'phone' => $request->phone,
-//                'otp' => $otp,
-//                'type' => 'forget',
-//            ]);
-//
-//            // ارسال OTP به شماره تلفن کاربر
-//            $this->sendOtp($request->phone, $otp);
-//
-//            return response()->json(new BaseDto(BaseDtoStatusEnum::OK,'کد یکبار مصرف برای بازنشانی رمز عبور ارسال شد.',
-//                data:
-//                [
-//                'otp_ttl' => $remainingTime,
-//                 ]),200);
-//        }
-//    }
-
     public function forgetPassword(Request $request)
     {
         // اعتبارسنجی شماره تلفن

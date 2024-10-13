@@ -16,8 +16,6 @@ return new class extends Migration
             $table->string('title')->nullable();
             $table->text('type')->nullable();
             $table->text('description');
-//            $table->boolean('is_read')->default(false); //False:خوانده نشده - true:خوانده شده
-//            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->timestamps();
         });
     }

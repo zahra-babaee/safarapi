@@ -14,11 +14,11 @@ return new class extends Migration
         Schema::create('articles', function (Blueprint $table) {
             $table->id();
             $table->string('title');
-            $table->string('description');
-            $table->enum('status', ['published', 'rejected','pending'])->default('pending');
-            $table->boolean('has_photo')->default(false); //False:ندارد - true:دارد
-            $table->foreignId('user_id')->constrained('users');
-            $table->foreignId('category_id')->constrained('categories');
+            $table->text('description'); // فیلد برای ذخیره HTML
+            $table->enum('status', ['published', 'rejected', 'pending'])->default('pending');
+            $table->boolean('has_photo')->default(false);
+            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
+            $table->foreignId('category_id')->constrained('categories')->onDelete('cascade');
             $table->timestamps();
         });
     }

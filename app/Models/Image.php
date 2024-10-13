@@ -7,21 +7,43 @@ use Illuminate\Database\Eloquent\Model;
 
 class Image extends Model
 {
-    use HasFactory; // اضافه کردن این خط برای استفاده از قابلیت‌های کارخانه
+    use HasFactory;
 
     protected $fillable = [
         'path',
         'type',
-        'is_default', // اضافه کردن این خط برای فیلد is_default
+        'is_default',
+        'user_id', // اضافه کردن user_id
+        'article_id', // اضافه کردن article_id برای ارتباط با مقالات
     ];
 
+    // رابطه با کاربر
     public function user()
     {
         return $this->belongsTo(User::class);
     }
 
-    public function isDefault() // متد جدید برای بررسی پیش‌فرض بودن تصویر
+    // رابطه با مقاله
+    public function article()
+    {
+        return $this->belongsTo(Article::class);
+    }
+
+    // متد بررسی پیش‌فرض بودن تصویر
+    public function isDefault()
     {
         return $this->is_default;
+    }
+
+    // متد برای دریافت آدرس تصویر
+    public function getUrlAttribute()
+    {
+        return asset($this->path);
+    }
+
+    // متد بررسی تعلق تصویر به کاربر خاص
+    public function belongsToUser($userId)
+    {
+        return $this->user_id === $userId;
     }
 }
