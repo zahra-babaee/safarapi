@@ -640,6 +640,22 @@
                 "summary": "خروج کاربر",
                 "description": "این متد برای خروج کاربر و باطل کردن توکن JWT استفاده می‌شود.",
                 "operationId": "7a0bae8c78f2509099e07643fc2895ce",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "token": {
+                                        "type": "string",
+                                        "example": "your_jwt_token_here"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
                 "responses": {
                     "200": {
                         "description": "خروج موفقیت آمیز",

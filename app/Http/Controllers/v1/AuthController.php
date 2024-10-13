@@ -408,6 +408,13 @@ class AuthController extends Controller
      *     description="این متد برای خروج کاربر و باطل کردن توکن JWT استفاده می‌شود.",
      *     tags={"احراز هویت"},
      *
+     *     @OA\RequestBody(
+     *          required=true,
+     *          @OA\JsonContent(
+     *              @OA\Property(property="token", type="string", example="your_jwt_token_here")
+     *          )
+     *      ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="خروج موفقیت آمیز",
