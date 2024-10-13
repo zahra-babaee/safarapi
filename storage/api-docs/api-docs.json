@@ -13,6 +13,178 @@
         "version": "1.0.0"
     },
     "paths": {
+        "/api/v1/articles": {
+            "post": {
+                "tags": [
+                    "مقالات"
+                ],
+                "summary": "ثبت مقاله",
+                "operationId": "931c08e8847a66a5e178097311378df8",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "title",
+                                    "description",
+                                    "category_id"
+                                ],
+                                "properties": {
+                                    "title": {
+                                        "type": "string",
+                                        "example": "عنوان مقاله"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "متن مقاله"
+                                    },
+                                    "category_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "has_photo": {
+                                        "type": "boolean",
+                                        "example": true
+                                    },
+                                    "images": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "مقاله با موفقیت ثبت شد."
+                    },
+                    "400": {
+                        "description": "خطاهای اعتبارسنجی رخ داده است."
+                    }
+                }
+            }
+        },
+        "/api/v1/articles/{articleId}": {
+            "put": {
+                "tags": [
+                    "مقالات"
+                ],
+                "summary": "به‌روزرسانی مقاله",
+                "operationId": "e48654ef704f390c5a78e33441cda6f5",
+                "parameters": [
+                    {
+                        "name": "articleId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "title",
+                                    "description",
+                                    "category_id"
+                                ],
+                                "properties": {
+                                    "title": {
+                                        "type": "string",
+                                        "example": "عنوان مقاله"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "متن مقاله"
+                                    },
+                                    "category_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "has_photo": {
+                                        "type": "boolean",
+                                        "example": true
+                                    },
+                                    "images": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "مقاله با موفقیت به‌روزرسانی شد."
+                    },
+                    "400": {
+                        "description": "خطاهای اعتبارسنجی رخ داده است."
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "مقالات"
+                ],
+                "summary": "حذف مقاله",
+                "operationId": "b4025d956fc2d8e0cd0d4c34e9222bfe",
+                "parameters": [
+                    {
+                        "name": "articleId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "مقاله با موفقیت حذف شد."
+                    }
+                }
+            }
+        },
+        "/api/v1/articles/published": {
+            "get": {
+                "tags": [
+                    "مقالات"
+                ],
+                "summary": "دریافت مقالات منتشر شده",
+                "operationId": "19a287bf1a64225120f990cc8ad0cf79",
+                "responses": {
+                    "200": {
+                        "description": "لیست مقالات منتشر شده با موفقیت بازیابی شد."
+                    }
+                }
+            }
+        },
+        "/api/v1/articles/pending": {
+            "get": {
+                "tags": [
+                    "مقالات"
+                ],
+                "summary": "دریافت مقالات در حال انتظار تایید",
+                "operationId": "1e73da29006174891857190a95f85bdc",
+                "responses": {
+                    "200": {
+                        "description": "لیست مقالات در حال انتظار تایید با موفقیت بازیابی شد."
+                    }
+                }
+            }
+        },
         "/v1/api/register": {
             "post": {
                 "tags": [
@@ -1556,6 +1728,10 @@
         }
     },
     "tags": [
+        {
+            "name": "مقالات",
+            "description": "مقالات"
+        },
         {
             "name": "احراز هویت",
             "description": "احراز هویت"

@@ -34,12 +34,10 @@ class ArticleController extends Controller
      *     @OA\Response(
      *         response=201,
      *         description="مقاله با موفقیت ثبت شد.",
-     *         @OA\JsonContent(ref="#/components/schemas/BaseDto")
      *     ),
      *     @OA\Response(
      *         response=400,
      *         description="خطاهای اعتبارسنجی رخ داده است.",
-     *         @OA\JsonContent(ref="#/components/schemas/BaseDto")
      *     )
      * )
      */
@@ -130,12 +128,10 @@ class ArticleController extends Controller
      *     @OA\Response(
      *         response=200,
      *         description="مقاله با موفقیت به‌روزرسانی شد.",
-     *         @OA\JsonContent(ref="#/components/schemas/BaseDto")
      *     ),
      *     @OA\Response(
      *         response=400,
      *         description="خطاهای اعتبارسنجی رخ داده است.",
-     *         @OA\JsonContent(ref="#/components/schemas/BaseDto")
      *     )
      * )
      */
@@ -232,7 +228,6 @@ class ArticleController extends Controller
      *     @OA\Response(
      *         response=200,
      *         description="لیست مقالات منتشر شده با موفقیت بازیابی شد.",
-     *         @OA\JsonContent(ref="#/components/schemas/BaseDto")
      *     )
      * )
      */
@@ -254,7 +249,6 @@ class ArticleController extends Controller
      *     @OA\Response(
      *         response=200,
      *         description="لیست مقالات در حال انتظار تایید با موفقیت بازیابی شد.",
-     *         @OA\JsonContent(ref="#/components/schemas/BaseDto")
      *     )
      * )
      */
