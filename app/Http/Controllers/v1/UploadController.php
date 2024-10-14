@@ -10,7 +10,6 @@ namespace App\Http\Controllers\v1;
     use Illuminate\Support\Facades\Validator;
     use Exception;
 
-
 class UploadController extends Controller
 {
     public function uploadImage(Request $request)
@@ -48,5 +47,11 @@ class UploadController extends Controller
         } catch (Exception $e) {
             return response()->json(['uploaded' => false, 'error' => $e->getMessage()], 500);
         }
+    }
+
+    public function index()
+    {
+        // این متد می‌تواند برای نمایش فرم آپلود استفاده شود
+        // return view('upload');
     }
 }
