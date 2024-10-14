@@ -22,10 +22,6 @@ Route::group([
     Route::delete('articles/{article}', [ArticleController::class, 'destroy'])->middleware('auth:api');
     Route::get('/articles/pending', [ArticleController::class, 'getPendingArticles'])->middleware('auth:api');
 });
-    Route::get('/articles/published', [ArticleController::class, 'getPublishedArticles']);
-    Route::get('upload', [\App\Http\Controllers\v1\UploadController::class, 'u']);
-    Route::post('upload-image', [\App\Http\Controllers\v1\UploadController::class, 'uploadImage']);
-
 Route::group([
    'prefix' => 'v1'
 ], function ($router) {
@@ -37,6 +33,9 @@ Route::group([
     Route::post('reset-password', [AuthController::class, 'resetPassword']);
     Route::post('login_password', [\App\Http\Controllers\v1\AuthController::class, 'loginWithPass']);
 
+    Route::get('/articles/published', [ArticleController::class, 'getPublishedArticles']);
+    Route::get('upload', [\App\Http\Controllers\v1\UploadController::class, 'u']);
+    Route::post('upload-image', [\App\Http\Controllers\v1\UploadController::class, 'uploadImage']);
 
     Route::middleware('auth:api')->group(function () {
         Route::get('notifications', [NotificationController::class, 'index']);
