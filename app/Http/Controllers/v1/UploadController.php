@@ -27,15 +27,17 @@ class UploadController extends Controller
 
         try {
             $filename = uniqid() . '.' . $request->file('upload')->getClientOriginalExtension();
-            $path = $request->file('upload')->storeAs('images', $filename, 'public');
-
+//            $path = $request->file('upload')->storeAs('images', $filename, 'public');
+            $path = $request->file('upload')->move(public_path('images'), $filename);
+//            $path = $request->file('upload')->storeAs('public/images', $filename);
+//            $path = $request->file('upload')->store('images', 'custom_images');
             $url = Storage::url($path);
 
             Image::query()->create([
                 'path' => $url,
                 'type' => $request->input('type'),
-                'user_id' => $request->input('user_id') ?? null,
-                'article_id' => $request->input('article_id') ?? null,
+                'user_id' => $request->input('user_id'),
+                'article_id' => $request->input('article_id'),
             ]);
 
             return response()->json([
