@@ -30,7 +30,9 @@ class UploadController extends Controller
             // ذخیره فایل در پوشه public/images
 //            $path = $request->file('upload')->storeAs('images', $filename, 'public');
 //            $path = $request->file('upload')->move(public_path('images'), $filename);
-            $path = $request->file('upload')->storeAs('public/images', $filename);
+//            $path = $request->file('upload')->storeAs('public/images', $filename);
+              $path = $request->file('upload')->store('images', 'custom_images');
+
 
 
             // آدرس کامل تصویر برای دسترسی در وب
