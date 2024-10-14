@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
 
 class Image extends Model
 {
@@ -28,22 +29,20 @@ class Image extends Model
     {
         return $this->belongsTo(Article::class);
     }
-
     // متد بررسی پیش‌فرض بودن تصویر
     public function isDefault()
     {
-        return $this->is_default;
+        return (bool) $this->is_default;
     }
-
     // متد برای دریافت آدرس تصویر
     public function getUrlAttribute()
     {
-        return asset($this->path);
+        return Storage::url($this->path);
     }
-
     // متد بررسی تعلق تصویر به کاربر خاص
     public function belongsToUser($userId)
     {
-        return $this->user_id === $userId;
+        return (int)$this->user_id === (int)$userId;
     }
+
 }

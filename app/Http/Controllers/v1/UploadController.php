@@ -14,9 +14,11 @@ class UploadController extends Controller
 {
     public function uploadImage(Request $request)
     {
-        // اعتبارسنجی فایل ورودی
         $validator = Validator::make($request->all(), [
-            'upload' => 'required|image|max:2048', // فایل باید تصویر باشد
+            'upload' => 'required|image|max:2048', // اعتبارسنجی فایل
+            'type' => 'required|string', // نوع تصویر باید ارسال شود
+            'article_id' => 'nullable|exists:articles,id', // اطمینان از وجود مقاله
+            'user_id' => 'nullable|exists:users,id', // اطمینان از وجود کاربر
         ]);
 
         if ($validator->fails()) {
@@ -24,27 +26,18 @@ class UploadController extends Controller
         }
 
         try {
-            // ساخت یک نام فایل یکتا
             $filename = uniqid() . '.' . $request->file('upload')->getClientOriginalExtension();
+            $path = $request->file('upload')->storeAs('images', $filename, 'public');
 
-            // ذخیره فایل در پوشه public/images
-//            $path = $request->file('upload')->storeAs('images', $filename, 'public');
-//            $path = $request->file('upload')->move(public_path('images'), $filename);
-//            $path = $request->file('upload')->storeAs('public/images', $filename);
-              $path = $request->file('upload')->store('images', 'custom_images');
-
-
-
-            // آدرس کامل تصویر برای دسترسی در وب
             $url = Storage::url($path);
 
-            // ذخیره اطلاعات تصویر در دیتابیس
             Image::query()->create([
                 'path' => $url,
-                'type' => 'article', // یا 'avatar' بر اساس نیاز
+                'type' => $request->input('type'),
+                'user_id' => $request->input('user_id') ?? null,
+                'article_id' => $request->input('article_id') ?? null,
             ]);
 
-            // پاسخ مناسب CKEditor
             return response()->json([
                 'uploaded' => true,
                 'url' => $url
@@ -52,11 +45,5 @@ class UploadController extends Controller
         } catch (Exception $e) {
             return response()->json(['uploaded' => false, 'error' => $e->getMessage()], 500);
         }
-    }
-
-    public function index()
-    {
-        // این متد می‌تواند برای نمایش فرم آپلود استفاده شود
-        // return view('upload');
     }
 }

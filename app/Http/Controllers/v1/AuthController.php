@@ -267,14 +267,14 @@ class AuthController extends Controller
                 'name'=> $request->name,
             ]);
 
-//            if ($user) {
-//                $defaultPhoto = Image::query()->first();
-//                if ($defaultPhoto) {
-//                    $user->images()->create(['path' => $defaultPhoto->path]);
-//                    $user->update(['has_avatar' => true]);
-//                }
-//                $user->update(['has_account' => true]);
-//            }
+            if ($user) {
+                $defaultPhoto = Image::query()->first();
+                if ($defaultPhoto) {
+                    $user->images()->create(['path' => $defaultPhoto->path]);
+                    $user->update(['has_avatar' => true]);
+                }
+                $user->update(['has_account' => true]);
+            }
 
             $otpRecord->delete();
 
