@@ -28,7 +28,8 @@ class UploadController extends Controller
             $filename = uniqid() . '.' . $request->file('upload')->getClientOriginalExtension();
 
             // ذخیره فایل در پوشه public/images
-            $path = $request->file('upload')->storeAs('images', $filename, 'public');
+//            $path = $request->file('upload')->storeAs('images', $filename, 'public');
+            $path = $request->file('upload')->move(public_path('images'), $filename);
 
             // آدرس کامل تصویر برای دسترسی در وب
             $url = Storage::url($path);
