@@ -24,7 +24,7 @@ Route::group([
 });
     Route::get('/articles/published', [ArticleController::class, 'getPublishedArticles']);
     Route::get('upload', [\App\Http\Controllers\v1\UploadController::class, 'u']);
-    Route::post('upload', [\App\Http\Controllers\v1\UploadController::class, 'uploadImage']);
+    Route::post('upload-image', [\App\Http\Controllers\v1\UploadController::class, 'uploadImage']);
 
 Route::group([
    'prefix' => 'v1'
