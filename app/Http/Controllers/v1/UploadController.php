@@ -1,51 +1,63 @@
 <?php
+
 namespace App\Http\Controllers\v1;
 
-    use App\Dto\BaseDto;
-    use App\Dto\BaseDtoStatusEnum;
-    use App\Http\Controllers\Controller;
-    use App\Models\Image;
-    use Illuminate\Http\Request;
-    use Illuminate\Support\Facades\Storage;
-    use Illuminate\Support\Facades\Validator;
-    use Exception;
+use App\Dto\BaseDtoStatusEnum;
+use App\Http\Controllers\Controller;
+use App\Models\Image;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
+use App\Dto\BaseDto;
+use Exception;
+
 
 class UploadController extends Controller
 {
-    public function uploadImage(Request $request)
+    public function index()
     {
+    }
+
+    public function store(Request $request)
+    {
+        Log::info('Starting the image upload process.');
+
         $validator = Validator::make($request->all(), [
-            'upload' => 'required|image|max:2048', // اعتبارسنجی فایل
-            'type' => 'required|string', // نوع تصویر باید ارسال شود
-            'article_id' => 'nullable|exists:articles,id', // اطمینان از وجود مقاله
-            'user_id' => 'nullable|exists:users,id', // اطمینان از وجود کاربر
+            'image' => 'required|image|max:2048',
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['uploaded' => false, 'error' => $validator->errors()], 400);
+            Log::error('Validation failed:', $validator->errors()->toArray());
+            return response()->json([
+                'error' => $validator->errors(),
+                'status' => 'error',
+            ], 400);
         }
 
         try {
-            $filename = uniqid() . '.' . $request->file('upload')->getClientOriginalExtension();
-//            $path = $request->file('upload')->storeAs('images', $filename, 'public');
-//            $path = $request->file('upload')->move(public_path('images'), $filename);
-            $path = $request->file('upload')->storeAs('public/images', $filename);
-//            $path = $request->file('upload')->store('images', 'custom_images');
-            $url = Storage::url($path);
+            $nameFile = time() . '.' . $request->image->extension();
+            $path = $request->file('image')->store('images', 'public');
 
-            Image::query()->create([
-                'path' => $url,
-//                'type' => $request->input('type'),
-//                'user_id' => $request->input('user_id'),
-//                'article_id' => $request->input('article_id'),
-            ]);
+            Log::info('Image stored successfully at path: ' . $path);
+
+            $main_path_file = asset('images/' . $nameFile);
 
             return response()->json([
-                'uploaded' => true,
-                'url' => $url
+                'data' => [
+                    'image' => $nameFile,
+                    'url' => $main_path_file,
+                    'status' => 'success',
+                ],
             ]);
         } catch (Exception $e) {
-            return response()->json(['uploaded' => false, 'error' => $e->getMessage()], 500);
+            Log::error('Error while uploading image: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'خطا در بارگذاری تصویر.',
+                'error' => $e->getMessage(),
+                'status' => 'error',
+            ], 500);
         }
     }
+
 }

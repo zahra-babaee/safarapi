@@ -35,7 +35,8 @@ Route::group([
 
     Route::get('/articles/published', [ArticleController::class, 'getPublishedArticles']);
     Route::get('upload', [\App\Http\Controllers\v1\UploadController::class, 'u']);
-    Route::post('upload-image', [\App\Http\Controllers\v1\UploadController::class, 'uploadImage']);
+    Route::post('upload-photo', [\App\Http\Controllers\v1\UploadController::class, 'store']);
+
 
     Route::middleware('auth:api')->group(function () {
         Route::get('notifications', [NotificationController::class, 'index']);

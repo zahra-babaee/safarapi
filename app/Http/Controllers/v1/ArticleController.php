@@ -70,8 +70,7 @@ class ArticleController extends Controller
 
         // پاکسازی کدهای HTML در توضیحات
         $validatedData = $validator->validated();
-        $purifierConfig = config('htmlpurifier');  // دریافت تنظیمات از فایل پیکربندی
-        $validatedData['description'] = Purifier::clean($validatedData['description'], $purifierConfig);
+        $validatedData['description'] = Purifier::clean($validatedData['description']);
 
         if ($request->has('images')) {
             foreach ($request->file('images') as $image) {
