@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('images', function (Blueprint $table) {
             $table->id();
-            $table->enum('type', ['avatar', 'article'])->default('avatar');
+            $table->enum('type', ['avatar', 'article','cover'])->default('avatar');
             $table->string('path');
             $table->boolean('is_default')->default(false); //False:ندارد - true:دارد
             $table->timestamps();

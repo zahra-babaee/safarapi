@@ -2,7 +2,9 @@
 
 use App\Http\Controllers\v1\ArticleController;
 use App\Http\Controllers\v1\AuthController;
+use App\Http\Controllers\v1\CKEditorController;
 use App\Http\Controllers\v1\NotificationController;
+use App\Http\Controllers\v1\TicketController;
 use Illuminate\Support\Facades\Route;
 
 
@@ -21,6 +23,11 @@ Route::group([
     Route::put('articles/{article}', [ArticleController::class, 'update'])->middleware('auth:api');
     Route::delete('articles/{article}', [ArticleController::class, 'destroy'])->middleware('auth:api');
     Route::get('/articles/pending', [ArticleController::class, 'getPendingArticles'])->middleware('auth:api');
+
+    Route::post('tickets/send', [TicketController::class, 'store'])->middleware('auth:api');
+//    Route::put('tickets/{ticket}', [TicketController::class, 'update'])->middleware('auth:api');
+    Route::delete('tickets/delete/{ticket}', [TicketController::class, 'destroy'])->middleware('auth:api');
+    Route::get('/tickets/{ticket}', [TicketController::class, 'index'])->middleware('auth:api');
 });
 Route::group([
    'prefix' => 'v1'
@@ -34,8 +41,10 @@ Route::group([
     Route::post('login_password', [\App\Http\Controllers\v1\AuthController::class, 'loginWithPass']);
 
     Route::get('/articles/published', [ArticleController::class, 'getPublishedArticles']);
+//    Route::post('upload/image', [ArticleController::class, 'uploadImage'])->middleware('auth:api');
     Route::get('upload', [\App\Http\Controllers\v1\UploadController::class, 'u']);
-    Route::post('upload-photo', [\App\Http\Controllers\v1\UploadController::class, 'store']);
+    Route::post('upload-photo', [\App\Http\Controllers\v1\UploadController::class, 'upload']);
+    Route::post('ckeditor/upload', [CKEditorController::class, 'upload'])->name('ckeditor.upload');
 
 
     Route::middleware('auth:api')->group(function () {
