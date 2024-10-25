@@ -5,6 +5,7 @@ namespace App\Http\Controllers\v1;
 use App\Dto\BaseDto;
 use App\Dto\BaseDtoStatusEnum;
 use App\Models\Image;
+use App\Models\Notification;
 use Illuminate\Routing\Controller;
 use App\Models\Otp;
 use App\Models\User;
@@ -13,6 +14,7 @@ use Illuminate\Support\Facades\Validator;
 use Tymon\JWTAuth\Exceptions\JWTException;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Illuminate\Support\Facades\Hash;
+use App\Events\NotificationEvent;
 
 class AuthController extends Controller
 {
@@ -278,6 +280,8 @@ class AuthController extends Controller
 
             $otpRecord->delete();
 
+//            $this->sendWelcomeNotification($user);
+
             try {
                 $token = JWTAuth::fromUser($user);
             } catch (JWTException $e) {
@@ -296,6 +300,14 @@ class AuthController extends Controller
                 'کد OTP نامعتبر است یا منقضی شده است.'),422);
         }
     }
+//    private function sendWelcomeNotification($user)
+//    {
+//        // پیدا کردن اعلان خوش‌آمدگویی
+//        $notification = Notification::query()->where('type', 'welcome')->first();
+//
+//        // تریگر کردن ایونت برای کاربر جدید
+//        event(new NotificationEvent($notification, [$user]));
+//    }
     /**
      * @OA\Post(
      *     path="/v1/api/login",

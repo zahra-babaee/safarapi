@@ -11,11 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('categories', function (Blueprint $table) {
+        Schema::create('temporary_images', function (Blueprint $table) {
             $table->id();
-            $table->string('city');
-            $table->string('province');
-            $table->enum('attraction_type', ['natural', 'historical', 'cultural', 'tourism', 'religious','food','fun','tourism news','celebrities']);
+            $table->string('path');
+//            $table->foreignId('user_id')->constrained('users');
+            $table->boolean('used')->default(false);
             $table->timestamps();
         });
     }
@@ -25,6 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('categories');
+        Schema::dropIfExists('temporary_images');
     }
 };

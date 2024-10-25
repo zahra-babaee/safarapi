@@ -16,7 +16,47 @@ class CategorySeeder extends Seeder
             [
                 'city' => 'مشهد',
                 'province' => 'خراسان رضوی',
+                'attraction_type' => 'tourism',
+            ],
+            [
+                'city' => 'مشهد',
+                'province' => 'خراسان رضوی',
                 'attraction_type' => 'historical',
+            ],
+            [
+                'city' => 'مشهد',
+                'province' => 'خراسان رضوی',
+                'attraction_type' => 'fun',
+            ],
+            [
+                'city' => 'مشهد',
+                'province' => 'خراسان رضوی',
+                'attraction_type' => 'celebrities',
+            ],
+            [
+                'city' => 'مشهد',
+                'province' => 'خراسان رضوی',
+                'attraction_type' => 'cultural',
+            ],
+            [
+                'city' => 'مشهد',
+                'province' => 'خراسان رضوی',
+                'attraction_type' => 'food',
+            ],
+            [
+                'city' => 'مشهد',
+                'province' => 'خراسان رضوی',
+                'attraction_type' => 'tourism news',
+            ],
+            [
+                'city' => 'مشهد',
+                'province' => 'خراسان رضوی',
+                'attraction_type' => 'religious',
+            ],
+            [
+                'city' => 'مشهد',
+                'province' => 'خراسان رضوی',
+                'attraction_type' => 'natural',
             ]
         ];
 

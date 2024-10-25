@@ -19,7 +19,7 @@ return new class extends Migration
             $table->boolean('has_photo')->default(false);
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->foreignId('category_id')->constrained('categories')->onDelete('cascade')->nullable;
-//            $table->foreignId('image_id')->nullable()->constrained('images')->onDelete('cascade');
+            $table->foreignId('image_id')->nullable()->constrained('images')->onDelete('cascade');
             $table->timestamps();
         });
     }

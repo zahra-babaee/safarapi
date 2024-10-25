@@ -19,10 +19,19 @@ Route::group([
     Route::post('verify-update' , [\App\Http\Controllers\v1\ProfileController::class, 'verifyUpdatePhoneOtp'])->middleware('auth:api');
     Route::delete('delete-avatar' ,[\App\Http\Controllers\v1\ProfileController::class, 'deleteAvatar'])->middleware('auth:api');
     Route::post('set-password', [\App\Http\Controllers\v1\ProfileController::class, 'setPassword'])->middleware('auth:api');
+
     Route::post('articles', [ArticleController::class, 'store'])->middleware('auth:api');
-    Route::put('articles/{article}', [ArticleController::class, 'update'])->middleware('auth:api');
+    Route::put('articles/{id}', [ArticleController::class, 'update'])->middleware('auth:api');
     Route::delete('articles/{article}', [ArticleController::class, 'destroy'])->middleware('auth:api');
-    Route::get('/articles/pending', [ArticleController::class, 'getPendingArticles'])->middleware('auth:api');
+    Route::get('/article/{id}', [ArticleController::class, 'show']);
+    Route::get('articles-all', [ArticleController::class, 'showArticles']);
+    Route::get('/articles/search', [ArticleController::class, 'search']);
+    Route::get('/articles/published', [ArticleController::class, 'getPublishedArticles']);
+
+    Route::post('upload/image', [ArticleController::class, 'uploadImage'])->middleware('auth:api');
+//    Route::get('upload', [\App\Http\Controllers\v1\UploadController::class, 'u']);
+    Route::post('upload/cover', [\App\Http\Controllers\v1\UploadController::class, 'uploadTemporaryCover'])->middleware('auth:api');
+    Route::post('upload-new-image', [\App\Http\Controllers\v1\UploadController::class, 'uploadImagenew']);
 
     Route::post('tickets/send', [TicketController::class, 'store'])->middleware('auth:api');
 //    Route::put('tickets/{ticket}', [TicketController::class, 'update'])->middleware('auth:api');
@@ -40,11 +49,6 @@ Route::group([
     Route::post('reset-password', [AuthController::class, 'resetPassword']);
     Route::post('login_password', [\App\Http\Controllers\v1\AuthController::class, 'loginWithPass']);
 
-    Route::get('/articles/published', [ArticleController::class, 'getPublishedArticles']);
-//    Route::post('upload/image', [ArticleController::class, 'uploadImage'])->middleware('auth:api');
-    Route::get('upload', [\App\Http\Controllers\v1\UploadController::class, 'u']);
-    Route::post('upload-photo', [\App\Http\Controllers\v1\UploadController::class, 'upload']);
-    Route::post('ckeditor/upload', [CKEditorController::class, 'upload'])->name('ckeditor.upload');
 
 
     Route::middleware('auth:api')->group(function () {

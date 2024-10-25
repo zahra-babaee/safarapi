@@ -12,9 +12,12 @@ return new class extends Migration
     public function up()
     {
         Schema::table('images', function (Blueprint $table) {
-            $table->unsignedBigInteger('user_id')->nullable();  // ستون user_id را اضافه می‌کند
+            // Add user_id and article_id columns
+            $table->unsignedBigInteger('user_id')->nullable();
             $table->unsignedBigInteger('article_id')->nullable();
-            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');  // کلید خارجی به جدول users
+
+            // Add foreign key constraints
+            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
             $table->foreign('article_id')->references('id')->on('articles')->onDelete('cascade');
         });
     }
@@ -22,11 +25,15 @@ return new class extends Migration
     public function down()
     {
         Schema::table('images', function (Blueprint $table) {
-            $table->dropForeign(['user_id']);  // حذف کلید خارجی
-            $table->dropColumn('user_id');     // حذف ستون
-            $table->dropForeign(['article_id']);
-            $table->dropColumn('article_id');
+            // Check if the foreign keys exist before dropping
+            if (Schema::hasColumn('images', 'user_id')) {
+                $table->dropForeign(['user_id']);  // Drop foreign key
+                $table->dropColumn('user_id');     // Drop column
+            }
+            if (Schema::hasColumn('images', 'article_id')) {
+                $table->dropForeign(['article_id']); // Drop foreign key
+                $table->dropColumn('article_id');     // Drop column
+            }
         });
     }
-
 };

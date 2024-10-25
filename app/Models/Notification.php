@@ -19,4 +19,8 @@ class Notification extends Model
             ->withPivot('is_read')
             ->withTimestamps();
     }
+    public function userNotifications()
+    {
+        return $this->hasMany(UserNotification::class);
+    }
 }

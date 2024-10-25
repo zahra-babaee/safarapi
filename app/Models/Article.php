@@ -9,7 +9,7 @@ class Article extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['title', 'description', 'category_id', 'user_id', 'status', 'has_photo'];
+    protected $fillable = ['title', 'description', 'category_id', 'user_id', 'status', 'image_id', 'has_photo'];
 
     public function user()
     {
@@ -23,7 +23,11 @@ class Article extends Model
 
     public function images()
     {
-        return $this->hasMany(Image::class);
+        return $this->hasMany(Image::class, 'article_id');
+    }
+
+    public function image()
+    {
+        return $this->hasOne(Image::class, 'id', 'image_id');
     }
 }
-
