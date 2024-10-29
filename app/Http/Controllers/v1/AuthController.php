@@ -239,7 +239,7 @@ class AuthController extends Controller
         $validator = Validator::make($request->all(), [
             'phone' => 'required|regex:/^09[0-9]{9}$/|digits:11',
             'otp' => 'required|digits:4',
-            ], [
+        ], [
             'phone.required' => 'شماره تلفن نباید خالی باشد.',
             'phone.regex' => 'شماره تلفن باید با 09 شروع شود و 11 رقم باشد.',
             'phone.digits' => 'شماره تلفن باید دقیقاً 11 رقم باشد.',
@@ -263,13 +263,17 @@ class AuthController extends Controller
             ->first();
 
         if ($otpRecord) {
-            $user = User::query()->firstOrCreate([
-                'phone' => $request->phone,
-                'has_password' => false,
-                'name'=> $request->name,
-            ]);
+            // بررسی وجود کاربر با شماره تلفن
+            $user = User::query()->where('phone', $request->phone)->first();
 
-            if ($user) {
+            // اگر کاربر وجود نداشت، ایجاد کاربر جدید
+            if (!$user) {
+                $user = User::query()->create([
+                    'phone' => $request->phone,
+                    'has_password' => false,
+                    'name' => $request->name,
+                ]);
+
                 $defaultPhoto = Image::query()->first();
                 if ($defaultPhoto) {
                     $user->images()->create(['path' => $defaultPhoto->path]);
@@ -278,16 +282,17 @@ class AuthController extends Controller
                 $user->update(['has_account' => true]);
             }
 
+            // حذف رکورد OTP پس از استفاده
             $otpRecord->delete();
 
-//            $this->sendWelcomeNotification($user);
-
+            // تولید توکن JWT برای کاربر
             try {
                 $token = JWTAuth::fromUser($user);
             } catch (JWTException $e) {
                 return response()->json(new BaseDto(BaseDtoStatusEnum::ERROR,
                     'مشکلی در ایجاد توکن به وجود آمده است.', ),500);
             }
+
             // پاسخ با توکن JWT
             return response()->json(new BaseDto(BaseDtoStatusEnum::OK,
                 'ورود موفقیت آمیز',
@@ -426,11 +431,6 @@ class AuthController extends Controller
      *         scheme="bearer",
      *         bearerFormat="JWT"
      *     ),
-     *
-     *     @OA\RequestBody(
-     *          required=false
-     *      ),
-     *
      *     @OA\Response(
      *         response=200,
      *         description="خروج موفقیت آمیز",

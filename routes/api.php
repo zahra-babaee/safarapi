@@ -23,20 +23,25 @@ Route::group([
     Route::post('articles', [ArticleController::class, 'store'])->middleware('auth:api');
     Route::put('articles/{id}', [ArticleController::class, 'update'])->middleware('auth:api');
     Route::delete('articles/{article}', [ArticleController::class, 'destroy'])->middleware('auth:api');
+    Route::get('user/articles', [ArticleController::class, 'userArticles'])->middleware('auth:api');
     Route::get('/article/{id}', [ArticleController::class, 'show']);
     Route::get('articles-all', [ArticleController::class, 'showArticles']);
     Route::get('/articles/search', [ArticleController::class, 'search']);
     Route::get('/articles/published', [ArticleController::class, 'getPublishedArticles']);
+    Route::get('/articles/new', [ArticleController::class, 'NewArticles']);
 
     Route::post('upload/image', [ArticleController::class, 'uploadImage'])->middleware('auth:api');
 //    Route::get('upload', [\App\Http\Controllers\v1\UploadController::class, 'u']);
     Route::post('upload/cover', [\App\Http\Controllers\v1\UploadController::class, 'uploadTemporaryCover'])->middleware('auth:api');
+    Route::post('update/cover', [\App\Http\Controllers\v1\UploadController::class, 'updateCover'])->middleware('auth:api');
     Route::post('upload-new-image', [\App\Http\Controllers\v1\UploadController::class, 'uploadImagenew']);
 
-    Route::post('tickets/send', [TicketController::class, 'store'])->middleware('auth:api');
-//    Route::put('tickets/{ticket}', [TicketController::class, 'update'])->middleware('auth:api');
-    Route::delete('tickets/delete/{ticket}', [TicketController::class, 'destroy'])->middleware('auth:api');
-    Route::get('/tickets/{ticket}', [TicketController::class, 'index'])->middleware('auth:api');
+    Route::get('/notifications', [NotificationController::class, 'showUserNotify'])->middleware('auth:api');
+    Route::patch('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->middleware('auth:api');
+
+    Route::post('/tickets', [TicketController::class, 'store'])->middleware('auth:api');
+    Route::post('/tickets/{ticketId}/messages', [TicketController::class, 'storeMessage'])->middleware('auth:api');
+    Route::get('/tickets/{ticketId}/messages', [TicketController::class, 'getMessages'])->middleware('auth:api');
 });
 Route::group([
    'prefix' => 'v1'
@@ -51,9 +56,8 @@ Route::group([
 
 
 
-    Route::middleware('auth:api')->group(function () {
-        Route::get('notifications', [NotificationController::class, 'index']);
-        Route::patch('notifications/{id}', [NotificationController::class, 'markAsRead']);
+    Route::group(['prefix' => 'v1'], function ($router) {
+
         Route::delete('notifications-old', [NotificationController::class, 'deleteOldNotifications']);
         Route::post('notifications-send', [NotificationController::class, 'sendNotification']);
     });

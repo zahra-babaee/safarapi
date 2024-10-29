@@ -27,13 +27,22 @@ class ArticleController extends Controller
             'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048'
         ]);
     }
-
-    public function show1($id)
+    private function translateAttractionType($type)
     {
-        $article = Article::with('images')->findOrFail($id);
-        return response()->json($article);
-    }
+        $translationMap = [
+            'natural' => 'طبیعی',
+            'historical' => 'تاریخی',
+            'cultural' => 'فرهنگی',
+            'tourism' => 'گردشگری',
+            'religious' => 'مذهبی',
+            'food' => 'غذا',
+            'fun' => 'تفریحی',
+            'tourism news' => 'اخبار گردشگری',
+            'celebrities' => 'مشاهیر'
+        ];
 
+        return $translationMap[$type] ?? $type;
+    }
     /**
      * @OA\Post(
      *     path="/api/v1/articles",
@@ -61,42 +70,6 @@ class ArticleController extends Controller
      * )
      * @throws ValidationException
      */
-
-//    public function store(Request $request)
-//    {
-//        $validator = $this->validateArticle($request);
-//
-//        if ($validator->fails()) {
-//            return response()->json(new BaseDto(
-//                BaseDtoStatusEnum::ERROR,
-//                'خطاهای اعتبارسنجی رخ داده است.',
-//                $validator->errors()->toArray()
-//            ), 400);
-//        }
-//
-//        // پاکسازی کدهای HTML در توضیحات
-//        $validatedData = $validator->validated();
-//        $validatedData['description'] = Purifier::clean($validatedData['description'], function($config) {
-//            $config->set('HTML.SafeIframe', true);
-//            $config->set('HTML.Allowed', 'p,b,strong,i,a[href],img[src|alt|width|height]'); // اجزای مجاز
-//            return $config;
-//        });
-//
-//        // ذخیره مقاله با وضعیت در انتظار تایید
-//        $article = Article::query()->create([
-//            'title' => $validatedData['title'],
-//            'description' => $validatedData['description'], // متن شامل لینک تصاویر
-//            'category_id' => $validatedData['category_id'],
-//            'user_id' => auth()->id(),
-//            'status' => 'pending', //or published
-//        ]);
-//
-//        return response()->json(new BaseDto(
-//            BaseDtoStatusEnum::OK,
-//            'مقاله با موفقیت ثبت شد.',
-//            $article
-//        ), 201);
-//    }
     public function store(Request $request)
     {
         // اعتبارسنجی ورودی‌ها
@@ -118,41 +91,48 @@ class ArticleController extends Controller
             return $config;
         });
 
+        // متغیر نگهدارنده ID عکس کاور
+        $imageId = null;
+
+        // بررسی و آپلود کاور در جدول temporary_images اگر وجود دارد
+        if ($request->hasFile('cover_image')) {
+            $coverImageFile = $request->file('cover_image');
+            $imageName = time() . '.' . $coverImageFile->extension();
+
+            // ذخیره فایل در مسیر موقت
+            $coverImageFile->move(public_path('images'), $imageName);
+            $tempImagePath = "images/$imageName";
+
+            // ایجاد رکورد در جدول temporary_images
+            $tempImage = TemporaryImage::query()->create([
+                'path' => $tempImagePath,
+                'user_id' => auth()->id(),
+            ]);
+        }
+
         // ذخیره مقاله با وضعیت در انتظار تایید
         $article = Article::query()->create([
             'title' => $validatedData['title'],
             'description' => $validatedData['description'],
-            'category_id' =>
-                $validatedData['category_id'],
+            'category_id' => $validatedData['category_id'],
             'user_id' => auth()->id(),
             'status' => 'pending',
         ]);
 
-        // بررسی آپلود کاور موقت
-        if ($request->has('temporary_image_id')) {
-            $tempImageId = $request->input('temporary_image_id');
-            $tempImage = TemporaryImage::query()->find($tempImageId);
+        // انتقال عکس کاور از temporary_images به images و به‌روزرسانی مقاله با image_id
+        if (isset($tempImage)) {
+            // انتقال عکس کاور به جدول images
+            $finalImage = Image::query()->create([
+                'path' => $tempImage->path,
+                'type' => 'cover',
+                'user_id' => auth()->id(),
+            ]);
 
-            // انتقال عکس کاور از temporary_images به images
-            if ($tempImage) {
-                $finalImage = Image::query()->create([
-                    'path' => $tempImage->path,
-                    'type' => 'cover'
-                    // فیلدهای اضافی
-                ]);
+            // به‌روزرسانی مقاله با image_id
+            $article->update(['image_id' => $finalImage->id]);
 
-                // به‌روزرسانی مقاله با image_id
-                $article->update(['image_id' => $finalImage->id]);
-
-                // حذف عکس از جدول temporary_images
-                $tempImage->delete();
-            } else {
-                return response()->json(new BaseDto(
-                    BaseDtoStatusEnum::ERROR,
-                    'عکس موقتی یافت نشد.',
-                    []
-                ), 404);
-            }
+            // حذف عکس از جدول temporary_images
+            $tempImage->delete();
         }
 
         return response()->json(new BaseDto(
@@ -161,7 +141,6 @@ class ArticleController extends Controller
             $article
         ), 201);
     }
-
     /**
      * @OA\Put(
      *     path="/api/v1/articles/{articleId}",
@@ -217,7 +196,7 @@ class ArticleController extends Controller
             return $config;
         });
 
-        // پیدا کردن مقاله و به‌روزرسانی آن
+        // پیدا کردن مقاله
         $article = Article::query()->findOrFail($articleId);
         $article->update([
             'title' => $validatedData['title'],
@@ -226,13 +205,30 @@ class ArticleController extends Controller
             'has_photo' => $validatedData['has_photo'] ?? false,
         ]);
 
+        // بررسی آپلود عکس کاور جدید
+        if ($request->hasFile('cover_image')) {
+            $coverImage = $request->file('cover_image');
+
+            // ذخیره عکس در پوشه‌ای مشخص و دریافت مسیر آن
+            $path = $coverImage->store('images/covers', 'public');
+
+            // ذخیره عکس در جدول images و تنظیم نوع آن به cover
+            $finalImage = Image::query()->create([
+                'path' => $path,
+                'type' => 'cover',
+                // فیلدهای اضافی در صورت نیاز
+            ]);
+
+            // به‌روزرسانی فیلد image_id در جدول articles
+            $article->update(['image_id' => $finalImage->id]);
+        }
+
         return response()->json(new BaseDto(
             BaseDtoStatusEnum::OK,
             'مقاله با موفقیت به‌روزرسانی شد.',
             $article
         ), 200);
     }
-
     /**
      * @OA\Delete(
      *     path="/api/v1/articles/{articleId}",
@@ -298,31 +294,6 @@ class ArticleController extends Controller
      *     )
      * )
      */
-//    public function getPendingArticles()
-//    {
-//        $articles = Article::query()
-//            ->where('status', 'pending')
-//            ->with('category', 'image')
-//            ->select('id', 'title', 'description', 'image_id', 'category_id')
-//            ->paginate(10);
-//
-//        // فرمت داده‌ها برای نمایش
-//        $formattedArticles = $articles->map(function ($article) {
-//            return [
-//                'id' => $article->id,
-//                'title' => $article->title,
-//                'description' => $article->description,
-//                'cover_image' => $article->image ? asset($article->image->path) : null,
-//                'category' => $article->category ? $article->category->name : null,
-//            ];
-//        });
-//
-//        return response()->json(new BaseDto(
-//            BaseDtoStatusEnum::OK,
-//            'مقالات در انتظار تایید با موفقیت بارگذاری شدند.',
-//            $formattedArticles
-//        ), 200);
-//    }
     public function showArticles()
     {
         $articles = Article::query()
@@ -332,24 +303,25 @@ class ArticleController extends Controller
             ->orderBy('created_at', 'desc') // مرتب‌سازی بر اساس تاریخ انتشار
             ->paginate(10); // صفحه‌بندی
 
-        // فرمت‌دهی به خروجی
-        $formattedArticles = $articles->map(function ($article) {
-            return [
-                'id' => $article->id,
-                'title' => $article->title,
-                'description' => Str::limit(strip_tags($article->description), 100), // نمایش خلاصه‌ای از مقاله
-                'cover_image' => $article->image ? asset($article->image->path) : null,
-                'category' => $article->category ? $article->category->name : null,
-            ];
-        });
+        $responseData = [
+            'article_id' =>$articles->id,
+            'title' => $articles->title,
+            'description' => $articles->description,
+            'abstract' => Str::limit(strip_tags($articles->description), 100), // حذف تگ‌های HTML
+            'cover_image' => $articles->image ? asset($articles->image->path) : null,
+            'category_id' => $articles->category_id,
+            'category_name' => $articles->category ? $this->translateAttractionType($articles->category->attraction_type) : null,
+            'created_at' => $articles->created_at->format('Y-m-d H:i'), // تاریخ ایجاد
+            'author' => [
+                    'name' => $articles->user ? $articles->user->name : null,
+                    'avatar' => $articles->user && $articles->user->avatar ? asset($articles->user->avatar) : null
+                ]
+        ];
 
         return response()->json(new BaseDto(
             BaseDtoStatusEnum::OK,
-            'مقالات در انتظار تایید با موفقیت بارگذاری شدند.',
-            [
-                'articles' => $formattedArticles,
-                'pagination' => $articles->links()
-            ]
+            'مقاله با موفقیت پیدا شد.',
+            $responseData
         ), 200);
     }
 
@@ -369,11 +341,18 @@ class ArticleController extends Controller
 
         // فرمت داده‌ها برای نمایش
         $responseData = [
+            'article_id'=> $article->id,
             'title' => $article->title,
             'description' => $article->description,
-            'cover_image' => $article->image ? $article->image->url : null, // استفاده از متد getUrlAttribute
-            'category_id' => $article->category_id
-            // تاریخ و ساعت هم لازمه
+            'abstract' => Str::limit(strip_tags($article->description), 100), // حذف تگ‌های HTML
+            'cover_image' => $article->image ? asset($article->image->path) : null,
+            'category_id' => $article->category_id,
+            'category_name' => $article->category ? $this->translateAttractionType($article->category->attraction_type) : null,
+            'created_at' => $article->created_at->format('Y-m-d H:i'), // تاریخ ایجاد
+            'author' => [
+                'name' => $article->user ? $article->user->name : null,
+                'avatar' => $article->user && $article->user->avatar ? asset($article->user->avatar) : null
+            ]
         ];
 
         return response()->json(new BaseDto(
@@ -422,23 +401,20 @@ class ArticleController extends Controller
     {
         $query = Article::query();
 
-        // اگر کاربر عنوان را وارد کرده باشد، براساس عنوان جستجو کنید
-        if ($request->has('title')) {
-            $query->where('title', 'like', '%' . $request->input('title') . '%');
+        // جستجو در عنوان و توضیحات با چندین کلمه
+        if ($request->filled('query')) {
+            $keywords = explode(' ', $request->input('query'));
+            $query->where(function ($q) use ($keywords) {
+                foreach ($keywords as $term) {
+                    $q->orWhere('title', 'like', '%' . $term . '%');
+                }
+            });
         }
 
-        // اگر کاربر دسته‌بندی را وارد کرده باشد، براساس دسته‌بندی فیلتر کنید
-        if ($request->has('category_id')) {
-            $query->where('category_id', $request->input('category_id'));
-        }
-
-        if ($request->has('created_at')) {
-            $query->where('created_at', '=', $request->input('created_at'));
-        }
-
-        // جستجو بر اساس توضیحات
-        if ($request->has('description')) {
-            $query->where('description', 'like', '%' . $request->input('description') . '%');
+        // جستجو بر اساس چندین category_id
+        if ($request->filled('category_ids')) {
+            $categoryIds = explode(',', $request->input('category_ids'));
+            $query->whereIn('category_id', $categoryIds);
         }
 
         // فیلتر وضعیت مقاله (اختیاری)
@@ -461,12 +437,14 @@ class ArticleController extends Controller
         // فرمت‌دهی و بازگرداندن نتایج
         $formattedArticles = $articles->map(function ($article) {
             return [
-                'id' => $article->id,
+                'article_id' => $article->id,
                 'title' => $article->title,
                 'description' => $article->description,
+                'abstract' => Str::limit(strip_tags($article->description), 100), // حذف تگ‌های HTML
                 'cover_image' => $article->image ? asset($article->image->path) : null,
-                'category' => $article->category ? $article->category->name : null,
-                'created_at' => $article->created_at,
+                'category_id' => $article->category_id,
+                'category_name' => $article->category ? $this->translateAttractionType($article->category->attraction_type) : null,
+                'created_at' => $article->created_at->format('Y-m-d H:i'), // تاریخ ایجاد
             ];
         });
 
@@ -475,5 +453,63 @@ class ArticleController extends Controller
             'نتایج جستجو با موفقیت بارگذاری شد.',
             $formattedArticles
         ), 200);
+    }
+
+    public function NewArticles()
+    {
+        $articles = Article::query()
+            ->where('status', 'pending') // فیلتر برای مقالات منتشر شده
+            ->orderBy('created_at', 'desc') // مرتب‌سازی بر اساس تاریخ ایجاد به صورت نزولی
+            ->take(10) // تعداد مقالاتی که می‌خواهید نمایش دهید
+            ->with('image') // بارگذاری تصویر کاور در صورت نیاز
+            ->select('id', 'title', 'description', 'image_id', 'category_id', 'created_at') // انتخاب فیلدهای مورد نیاز
+            ->get();
+
+        $formattedArticles = $articles->map(function ($article) {
+            return [
+                'article_id' => $article->id,
+                'title' => $article->title,
+                'description' => $article->description,
+                'abstract' => Str::limit(strip_tags($article->description), 100), // حذف تگ‌های HTML
+                'cover_image' => $article->image ? asset($article->image->path) : null,
+                'category_id' => $article->category_id,
+                'category_name' => $article->category ? $this->translateAttractionType($article->category->attraction_type) : null,
+                'created_at' => $article->created_at->format('Y-m-d H:i'), // تاریخ ایجاد
+            ];
+        });
+
+        return response()->json(new BaseDto(
+            BaseDtoStatusEnum::OK,
+            'آخرین مقالات با موفقیت بارگذاری شد.',
+            $formattedArticles
+        ), 200);
+    }
+    public function userArticles()
+    {
+        // فرض کنید کاربر جاری احراز هویت شده و از طریق `auth()->user()` در دسترس است
+        $user = auth()->user();
+
+        // مقالات کاربر را با اطلاعات مربوطه دریافت کنید
+        $articles = $user->articles()->latest()->get();
+
+        // مقالات را به فرمت مورد نظر تبدیل کنید
+        $formattedArticles = $articles->map(function ($article) {
+            return [
+                'article_id' => $article->id,
+                'title' => $article->title,
+                'description' => $article->description,
+                'abstract' => Str::limit(strip_tags($article->description), 100), // حذف تگ‌های HTML
+                'cover_image' => $article->image ? url( $article->image->path) : null,
+                'category_id' => $article->category_id,
+                'category_name' => $article->category ? $this->translateAttractionType($article->category->attraction_type) : null,
+                'created_at' => $article->created_at->format('Y-m-d H:i'),
+            ];
+        });
+
+        return response()->json([
+            'status' => 'OK',
+            'message' => 'مقالات کاربر با موفقیت بارگذاری شد.',
+            'data' => $formattedArticles,
+        ]);
     }
 }

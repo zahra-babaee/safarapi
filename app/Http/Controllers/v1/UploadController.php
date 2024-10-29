@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\v1;
 
 use App\Http\Controllers\Controller;
+use App\Models\Article;
 use App\Models\Image;
 use App\Models\TemporaryImage;
 use Illuminate\Http\Request;
@@ -68,6 +69,66 @@ class UploadController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'خطا در آپلود عکس: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+    public function updateCover(Request $request, $articleId)
+    {
+        // اعتبارسنجی ورودی
+        $request->validate([
+            'temporary_image_id' => 'required|exists:temporary_images,id', // عکس موقت باید وجود داشته باشد
+        ]);
+
+        // یافتن مقاله
+        $article = Article::query()->findOrFail($articleId);
+
+        // بررسی اینکه کاربر مجاز به ویرایش مقاله است
+        if ($article->user_id !== auth()->id()) {
+            return response()->json([
+                'message' => 'شما مجاز به ویرایش این مقاله نیستید.',
+            ], 403);
+        }
+
+        // پیدا کردن عکس موقت
+        $tempImage = TemporaryImage::query()->find($request->input('temporary_image_id'));
+
+        if (!$tempImage) {
+            return response()->json([
+                'message' => 'عکس موقتی یافت نشد.',
+            ], 404);
+        }
+
+        try {
+            // حذف کاور قبلی اگر وجود داشته باشد
+            if ($article->coverImage) {
+                if (file_exists(public_path($article->coverImage->path))) {
+                    unlink(public_path($article->coverImage->path));
+                }
+                $article->coverImage->delete();
+            }
+
+            // انتقال عکس از جدول temporary_images به images
+            $finalImage = Image::query()->create([
+                'path' => $tempImage->path,
+                'type' => 'cover',
+                'user_id' => auth()->id(),
+                'article_id' => $article->id,
+            ]);
+
+            // به‌روزرسانی مقاله با کاور جدید
+            $article->update(['image_id' => $finalImage->id]);
+
+            // حذف عکس از جدول temporary_images
+            $tempImage->delete();
+
+            return response()->json([
+                'message' => 'کاور مقاله با موفقیت به‌روزرسانی شد.',
+                'image_id' => $finalImage->id,
+                'image_path' => $finalImage->path,
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'خطا در به‌روزرسانی کاور: ' . $e->getMessage(),
             ], 500);
         }
     }

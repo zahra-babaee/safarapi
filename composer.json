@@ -7,13 +7,12 @@
     "require": {
         "php": "^8.2",
         "darkaonline/l5-swagger": "^8.6",
-        "laravel/framework":
-
-        "^11.9",
-        
+        "laravel/framework": "^11.9",
+        "laravel/reverb": "^1.0",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.9",
         "mews/purifier": "^3.4",
+        "pusher/pusher-php-server": "^7.2",
         "salibhdr/typhoon-iran-cities": "^3.0",
         "tymon/jwt-auth": "^2.1"
     },
