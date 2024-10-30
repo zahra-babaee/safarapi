@@ -548,40 +548,55 @@ class AuthController extends Controller
             ), 400);
         }
 
-        // بررسی وجود کاربر
+        $otpValidityDuration = 120; // اعتبار OTP به ثانیه
         $user = User::query()->where('phone', $request->phone)->first();
 
+        // بررسی وجود کاربر
         if (!$user) {
-            return response()->json(new BaseDto(BaseDtoStatusEnum::ERROR,'کاربری با این شماره تلفن وجود ندارد.'),404);
-        } else {
-            $lastOtp = Otp::query()->where('phone', $request->phone)->orderBy('created_at', 'desc')->first();
-
-            // اگر OTP وجود داشته باشد، زمان باقی‌مانده را محاسبه کنید
-            $remainingTime = $lastOtp ? Otp::remainingTime($request->phone, 'forget') : 0;
-
-            if ($remainingTime > 0) {
-                return response()->json(new BaseDto(BaseDtoStatusEnum::ERROR,'لطفاً قبل از درخواست جدید دو دقیقه صبر کنید.',
-                    data: [
-                        'otp_ttl' => $remainingTime,
-                    ]), 429);
-            }
-
-            // ایجاد کد OTP و ذخیره آن
-            $otp = rand(1000, 9999);
-            Otp::query()->create([
-                'phone' => $request->phone,
-                'otp' => $otp,
-                'type' => 'forget',
-            ]);
-
-            // ارسال OTP به شماره تلفن کاربر
-            $this->sendOtp($request->phone, $otp);
-
-            return response()->json(new BaseDto(BaseDtoStatusEnum::OK,'کد یکبار مصرف برای بازنشانی رمز عبور ارسال شد.',
-                data: [
-                    'otp_ttl' => null, // مقدار null اگر OTP ارسال شده است
-                ]), 200);
+            return response()->json(new BaseDto(BaseDtoStatusEnum::ERROR, 'کاربری با این شماره تلفن وجود ندارد.'), 404);
         }
+
+        $lastOtp = Otp::query()->where('phone', $request->phone)->where('type', 'forget')->orderBy('created_at', 'desc')->first();
+
+        // بررسی زمان باقیمانده برای آخرین OTP
+        if ($lastOtp) {
+            $timeSinceLastOtp = now()->timestamp - $lastOtp->created_at->timestamp;
+
+            if ($timeSinceLastOtp < $otpValidityDuration) {
+                $remainingSeconds = $otpValidityDuration - $timeSinceLastOtp;
+
+                return response()->json(new BaseDto(
+                    BaseDtoStatusEnum::ERROR,
+                    "تا {$remainingSeconds} ثانیه دیگر نمی‌توانید درخواست جدید بدهید.",
+                    data: [
+                        'otp_ttl' => $remainingSeconds,
+                    ]
+                ), 429);
+            }
+        }
+
+        // ایجاد کد OTP جدید و ذخیره آن
+        $otp = rand(1000, 9999);
+        Otp::query()->create([
+            'phone' => $request->phone,
+            'otp' => $otp,
+            'type' => 'forget',
+        ]);
+
+        // ارسال OTP به کاربر
+        $this->sendOtp($request->phone, $otp);
+
+        // پیامی برای ارسال OTP جدید
+        $message = $lastOtp ? 'کد جدید ارسال شد.' : 'کد ارسال شد.';
+
+        return response()->json(new BaseDto(
+            BaseDtoStatusEnum::OK,
+            $message,
+            data: [
+                'phone' => $request->phone,
+                'otp_ttl' => $otpValidityDuration,
+            ]
+        ), 200);
     }
     /**
      * @OA\Post(
@@ -642,22 +657,63 @@ class AuthController extends Controller
      *     )
      * )
      */
-    public function resetPassword(Request $request)
+    public function verifyOtpForReset(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'phone' => 'required|regex:/^09[0-9]{9}$/|digits:11',
             'otp' => 'required|digits:4',
-            'password' => [
-                'required',
-                'min:8',
-                'confirmed', 'regex:/[a-z]/', 'regex:/[A-Z]/', 'regex:/[0-9]/', 'regex:/[@$!%*#?&]/'
-            ]
         ], [
             'phone.required' => 'شماره تلفن نباید خالی باشد.',
             'phone.regex' => 'شماره تلفن باید با 09 شروع شود و 11 رقم باشد.',
             'phone.digits' => 'شماره تلفن باید دقیقاً 11 رقم باشد.',
             'otp.required' => 'کد یکبار مصرف را وارد کنید.',
             'otp.digits' => 'کد یکبار مصرف باید 4 رقم باشد.',
+        ]);
+
+        if ($validator->fails()) {
+            $errors = $validator->errors()->toArray();
+            return response()->json(new BaseDto(
+                BaseDtoStatusEnum::ERROR,
+                'خطاهای اعتبارسنجی رخ داده است.',
+                $errors
+            ), 400);
+        }
+
+        // جستجوی کد OTP در دیتابیس
+        $otpRecord = Otp::query()
+            ->where('phone', $request->phone)
+            ->where('otp', $request->otp)
+            ->where('type', 'forget')
+            ->where('created_at', '>=', now()->subMinutes(2)) // بررسی زمان معتبر بودن کد
+            ->first();
+
+        if (!$otpRecord) {
+            return response()->json(new BaseDto(BaseDtoStatusEnum::ERROR, 'کد OTP نامعتبر است یا منقضی شده است.'), 422);
+        }
+
+        // حذف رکورد OTP بعد از تایید موفق
+        $otpRecord->delete();
+
+        // تایید موفق کد OTP
+        return response()->json(new BaseDto(BaseDtoStatusEnum::OK, 'کد یکبار مصرف تایید شد.'), 200);
+    }
+    public function resetPassword(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'phone' => 'required|regex:/^09[0-9]{9}$/|digits:11',
+            'password' => [
+                'required',
+                'min:8',
+                'confirmed',
+                'regex:/[a-z]/',
+                'regex:/[A-Z]/',
+                'regex:/[0-9]/',
+                'regex:/[@$!%*#?&]/'
+            ]
+        ], [
+            'phone.required' => 'شماره تلفن نباید خالی باشد.',
+            'phone.regex' => 'شماره تلفن باید با 09 شروع شود و 11 رقم باشد.',
+            'phone.digits' => 'شماره تلفن باید دقیقاً 11 رقم باشد.',
             'password.required' => 'رمز عبور نباید خالی باشد.',
             'password.min' => 'رمز عبور باید حداقل 8 کاراکتر باشد.',
             'password.confirmed' => 'رمز عبور و تأیید آن مطابقت ندارند.',
@@ -668,36 +724,84 @@ class AuthController extends Controller
                 'regex:/[@$!%*#?&]/' => 'رمز عبور باید حداقل یک کاراکتر خاص (مثل @$!%*#?&) داشته باشد.',
             ]
         ]);
+
         if ($validator->fails()) {
             $errors = $validator->errors()->toArray();
-
             return response()->json(new BaseDto(
                 BaseDtoStatusEnum::ERROR,
                 'خطاهای اعتبارسنجی رخ داده است.',
                 $errors
             ), 400);
         }
-        // جستجوی کد OTP در دیتابیس
-        $otpRecord = Otp::query()
-            ->where('phone', $request->phone)
-            ->where('otp', $request->otp)
-            ->where('created_at', '>=', now()->subMinutes(2)) // بررسی زمان معتبر بودن کد
-            ->first();
-
-        if (!$otpRecord) {
-            return response()->json(new BaseDto(BaseDtoStatusEnum::ERROR,'کد OTP نامعتبر است یا منقضی شده است.'), 422);
-        }
 
         // بروزرسانی رمز عبور کاربر
         $user = User::query()->where('phone', $request->phone)->first();
+
+        if (!$user) {
+            return response()->json(new BaseDto(BaseDtoStatusEnum::ERROR, 'کاربری با این شماره تلفن وجود ندارد.'), 404);
+        }
+
         $user->update(['password' => Hash::make($request->password)]);
 
-        // حذف رکورد OTP بعد از استفاده
-        $otpRecord->delete();
-
-        return response()->json(new BaseDto(BaseDtoStatusEnum::OK,'رمز عبور با موفقیت بازنشانی شد.'),
-            200);
+        return response()->json(new BaseDto(BaseDtoStatusEnum::OK, 'رمز عبور با موفقیت بازنشانی شد.'), 200);
     }
+
+//    public function resetPassword(Request $request)
+//    {
+//        $validator = Validator::make($request->all(), [
+//            'phone' => 'required|regex:/^09[0-9]{9}$/|digits:11',
+//            'otp' => 'required|digits:4',
+//            'password' => [
+//                'required',
+//                'min:8',
+//                'confirmed', 'regex:/[a-z]/', 'regex:/[A-Z]/', 'regex:/[0-9]/', 'regex:/[@$!%*#?&]/'
+//            ]
+//        ], [
+//            'phone.required' => 'شماره تلفن نباید خالی باشد.',
+//            'phone.regex' => 'شماره تلفن باید با 09 شروع شود و 11 رقم باشد.',
+//            'phone.digits' => 'شماره تلفن باید دقیقاً 11 رقم باشد.',
+//            'otp.required' => 'کد یکبار مصرف را وارد کنید.',
+//            'otp.digits' => 'کد یکبار مصرف باید 4 رقم باشد.',
+//            'password.required' => 'رمز عبور نباید خالی باشد.',
+//            'password.min' => 'رمز عبور باید حداقل 8 کاراکتر باشد.',
+//            'password.confirmed' => 'رمز عبور و تأیید آن مطابقت ندارند.',
+//            'password.regex' => [
+//                'regex:/[a-z]/' => 'رمز عبور باید حداقل یک حرف کوچک داشته باشد.',
+//                'regex:/[A-Z]/' => 'رمز عبور باید حداقل یک حرف بزرگ داشته باشد.',
+//                'regex:/[0-9]/' => 'رمز عبور باید حداقل یک عدد داشته باشد.',
+//                'regex:/[@$!%*#?&]/' => 'رمز عبور باید حداقل یک کاراکتر خاص (مثل @$!%*#?&) داشته باشد.',
+//            ]
+//        ]);
+//        if ($validator->fails()) {
+//            $errors = $validator->errors()->toArray();
+//
+//            return response()->json(new BaseDto(
+//                BaseDtoStatusEnum::ERROR,
+//                'خطاهای اعتبارسنجی رخ داده است.',
+//                $errors
+//            ), 400);
+//        }
+//        // جستجوی کد OTP در دیتابیس
+//        $otpRecord = Otp::query()
+//            ->where('phone', $request->phone)
+//            ->where('otp', $request->otp)
+//            ->where('created_at', '>=', now()->subMinutes(2)) // بررسی زمان معتبر بودن کد
+//            ->first();
+//
+//        if (!$otpRecord) {
+//            return response()->json(new BaseDto(BaseDtoStatusEnum::ERROR,'کد OTP نامعتبر است یا منقضی شده است.'), 422);
+//        }
+//
+//        // بروزرسانی رمز عبور کاربر
+//        $user = User::query()->where('phone', $request->phone)->first();
+//        $user->update(['password' => Hash::make($request->password)]);
+//
+//        // حذف رکورد OTP بعد از استفاده
+//        $otpRecord->delete();
+//
+//        return response()->json(new BaseDto(BaseDtoStatusEnum::OK,'رمز عبور با موفقیت بازنشانی شد.'),
+//            200);
+//    }
 
     private function sendOtp($phone, $otp)
     {

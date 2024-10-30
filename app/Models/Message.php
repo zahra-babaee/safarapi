@@ -27,4 +27,9 @@ class Message extends Model
     {
         return $this->hasMany(TicketAttachment::class);
     }
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'creator_id');
+    }
+
 }

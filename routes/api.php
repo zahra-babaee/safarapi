@@ -2,10 +2,10 @@
 
 use App\Http\Controllers\v1\ArticleController;
 use App\Http\Controllers\v1\AuthController;
-use App\Http\Controllers\v1\CKEditorController;
 use App\Http\Controllers\v1\NotificationController;
 use App\Http\Controllers\v1\TicketController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Broadcast;
 
 
 Route::group([
@@ -51,21 +51,24 @@ Route::group([
     Route::get('users', [\App\Http\Controllers\v1\UserController::class, 'index']);
 
     Route::post('forget-password', [AuthController::class, 'forgetPassword']);
+    Route::post('verify-otp-forget', [AuthController::class, 'verifyOtpForReset']);
     Route::post('reset-password', [AuthController::class, 'resetPassword']);
     Route::post('login_password', [\App\Http\Controllers\v1\AuthController::class, 'loginWithPass']);
 
 
 
     Route::group(['prefix' => 'v1'], function ($router) {
+        Route::post('messages',[\App\Http\Controllers\v1\ChatController::class,'message']);
 
         Route::delete('notifications-old', [NotificationController::class, 'deleteOldNotifications']);
         Route::post('notifications-send', [NotificationController::class, 'sendNotification']);
     });
-
+    Broadcast::routes(['middleware' => ['auth:api']]);
 
 
     Route::get('test', function (){
        return response()->json(new \App\Dto\BaseDto(\App\Dto\BaseDtoStatusEnum::ERROR,"خطا"))->setStatusCode(200);
     });
+    Route::post('messages',[\App\Http\Controllers\v1\ChatController::class,'message']);
 });
 
