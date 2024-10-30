@@ -15,13 +15,6 @@ use Illuminate\Support\Facades\Validator;
 
 class NotificationController extends Controller
 {
-
-//// ذخیره‌سازی اعلانات برای کاربر
-//Redis::set("user:{$userId}:notifications", json_encode($notifications));
-//
-//// بازیابی اعلانات از Redis
-//$notifications = json_decode(Redis::get("user:{$userId}:notifications"), true);
-
     /**
      * @OA\Get(
      *     path="/api/v1/notifications",
@@ -91,7 +84,7 @@ class NotificationController extends Controller
     }
     /**
      * @OA\patch(
-     *     path="/api/v1/notifications/{id}/mark-as-read",
+     *     path="/api/v1//notifications/{id}/read",
      *     summary="علامت‌گذاری اعلان به عنوان خوانده شده",
      *     description="این متد یک اعلان خاص را برای کاربر به عنوان خوانده شده علامت‌گذاری می‌کند.",
      *     tags={"اعلانات"},

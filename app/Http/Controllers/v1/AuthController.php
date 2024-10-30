@@ -305,14 +305,6 @@ class AuthController extends Controller
                 'کد OTP نامعتبر است یا منقضی شده است.'),422);
         }
     }
-//    private function sendWelcomeNotification($user)
-//    {
-//        // پیدا کردن اعلان خوش‌آمدگویی
-//        $notification = Notification::query()->where('type', 'welcome')->first();
-//
-//        // تریگر کردن ایونت برای کاربر جدید
-//        event(new NotificationEvent($notification, [$user]));
-//    }
     /**
      * @OA\Post(
      *     path="/v1/api/login",
@@ -462,68 +454,66 @@ class AuthController extends Controller
     /**
      * @OA\Post(
      *     path="/v1/api/forget-password",
-     *     summary="فراموشی رمز عبور",
-     *     description="ارسال کد یکبار مصرف (OTP) برای بازنشانی رمز عبور به شماره تلفن کاربر.",
+     *     summary="بازیابی رمز عبور با ارسال OTP",
+     *     description="این متد برای ارسال کد OTP به شماره تلفن کاربر به منظور بازیابی رمز عبور استفاده می‌شود. شماره تلفن باید معتبر باشد و زمان بین درخواست‌های OTP کنترل می‌شود.",
      *     tags={"احراز هویت"},
      *
      *     @OA\RequestBody(
      *         required=true,
+     *         description="شماره تلفن باید وارد شود و باید با 09 شروع و 11 رقم باشد.",
      *         @OA\JsonContent(
-     *             @OA\Property(property="phone", type="string", example="09123456789", description="شماره تلفن کاربر")
-     *         )
-     *     ),
-     *
-     *     @OA\Response(
-     *         response=200,
-     *         description="کد یکبار مصرف برای بازنشانی رمز عبور ارسال شد",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="OK"),
-     *             @OA\Property(property="message", type="string", example="کد یکبار مصرف برای بازنشانی رمز عبور ارسال شد."),
-     *             @OA\Property(property="data", type="object",
-     *                 @OA\Property(property="otp_ttl", type="integer", example=120, description="زمان باقیمانده برای اعتبار کد OTP به ثانیه")
+     *             required={"phone"},
+     *             @OA\Property(
+     *                 property="phone",
+     *                 type="string",
+     *                 description="شماره تلفن کاربر",
+     *                 example="09123456789"
      *             )
      *         )
      *     ),
      *
      *     @OA\Response(
+     *          response=200,
+     *          description="OTP با موفقیت ارسال شد یا درخواست زودهنگام برای OTP.",
+     *          @OA\JsonContent(
+     *              @OA\Property(property="status", type="string", example="OK"),
+     *              @OA\Property(property="message", type="string", example="کد ارسال شد."),
+     *              @OA\Property(property="data", type="object",
+     *                  @OA\Property(property="phone", type="string", example="09123456789"),
+     *                  @OA\Property(property="otp_ttl", type="integer", example=120),
+     *                  @OA\Property(property="has_account", type="boolean", example=false),
+     *                  @OA\Property(property="has_password", type="boolean", example=false),
+     *                  @OA\Property(property="otp_request_error", type="string", example="تا 80 ثانیه دیگر نمی‌توانید درخواست جدید بدهید.")
+     *              )
+     *         )
+     *     ),
+     *
+     *     @OA\Response(
      *         response=400,
-     *         description="خطاهای اعتبارسنجی رخ داده است",
+     *         description="خطاهای اعتبارسنجی",
      *         @OA\JsonContent(
      *             @OA\Property(property="status", type="string", example="ERROR"),
      *             @OA\Property(property="message", type="string", example="خطاهای اعتبارسنجی رخ داده است."),
-     *             @OA\Property(property="data", type="object",
-     *                 @OA\Property(property="phone", type="array", @OA\Items(type="string", example="شماره تلفن باید دقیقاً 11 رقم باشد."))
+     *             @OA\Property(property="errors", type="object",
+     *                 @OA\Property(property="phone", type="array", @OA\Items(type="string", example="شماره تلفن نباید خالی باشد."))
      *             )
      *         )
      *     ),
      *
      *     @OA\Response(
      *         response=404,
-     *         description="کاربری با این شماره تلفن وجود ندارد",
+     *         description="کاربری با این شماره تلفن وجود ندارد.",
      *         @OA\JsonContent(
      *             @OA\Property(property="status", type="string", example="ERROR"),
      *             @OA\Property(property="message", type="string", example="کاربری با این شماره تلفن وجود ندارد.")
      *         )
      *     ),
-     *
-     *     @OA\Response(
-     *         response=429,
-     *         description="لطفاً قبل از درخواست جدید دو دقیقه صبر کنید.",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="ERROR"),
-     *             @OA\Property(property="message", type="string", example="لطفاً قبل از درخواست جدید دو دقیقه صبر کنید."),
-     *             @OA\Property(property="data", type="object",
-     *                 @OA\Property(property="otp_ttl", type="integer", example=120, description="زمان باقی‌مانده برای درخواست جدید")
-     *             )
-     *         )
-     *     ),
-     *
      *     @OA\Response(
      *         response=500,
      *         description="خطای سرور",
      *         @OA\JsonContent(
      *             @OA\Property(property="status", type="string", example="ERROR"),
-     *             @OA\Property(property="message", type="string", example="خطایی در سرور رخ داده است.")
+     *             @OA\Property(property="message", type="string", example="خطای سرور رخ داده است.")
      *         )
      *     )
      * )
@@ -556,7 +546,11 @@ class AuthController extends Controller
             return response()->json(new BaseDto(BaseDtoStatusEnum::ERROR, 'کاربری با این شماره تلفن وجود ندارد.'), 404);
         }
 
-        $lastOtp = Otp::query()->where('phone', $request->phone)->where('type', 'forget')->orderBy('created_at', 'desc')->first();
+        $lastOtp = Otp::query()
+            ->where('phone', $request->phone)
+            ->where('type', 'forget')
+            ->orderBy('created_at', 'desc')
+            ->first();
 
         // بررسی زمان باقیمانده برای آخرین OTP
         if ($lastOtp) {
@@ -600,59 +594,59 @@ class AuthController extends Controller
     }
     /**
      * @OA\Post(
-     *     path="/v1/api/reset-password",
-     *     summary="بازنشانی رمز عبور",
-     *     description="بازنشانی رمز عبور کاربر با استفاده از کد یکبار مصرف (OTP) ارسال شده به شماره تلفن.",
+     *     path="/v1/api/verify-otp-forget",
+     *     summary="تایید کد OTP برای بازنشانی رمز عبور",
+     *     description="این متد برای تایید کد OTP ارسال‌شده به شماره تلفن کاربر به منظور بازنشانی رمز عبور استفاده می‌شود.",
      *     tags={"احراز هویت"},
      *
      *     @OA\RequestBody(
      *         required=true,
+     *         description="شماره تلفن و کد OTP باید وارد شوند.",
      *         @OA\JsonContent(
-     *             @OA\Property(property="phone", type="string", example="09123456789", description="شماره تلفن کاربر"),
-     *             @OA\Property(property="otp", type="string", example="1234", description="کد یکبار مصرف ارسال شده به کاربر"),
-     *             @OA\Property(property="password", type="string", example="P@ssw0rd", description="رمز عبور جدید"),
-     *             @OA\Property(property="password_confirmation", type="string", example="P@ssw0rd", description="تأیید رمز عبور")
+     *             required={"phone", "otp"},
+     *             @OA\Property(
+     *                 property="phone",
+     *                 type="string",
+     *                 description="شماره تلفن کاربر",
+     *                 example="09123456789"
+     *             ),
+     *             @OA\Property(
+     *                 property="otp",
+     *                 type="string",
+     *                 description="کد OTP ارسال شده به کاربر",
+     *                 example="1234"
+     *             )
      *         )
      *     ),
      *
      *     @OA\Response(
      *         response=200,
-     *         description="رمز عبور با موفقیت بازنشانی شد",
+     *         description="کد یکبار مصرف تایید شد.",
      *         @OA\JsonContent(
      *             @OA\Property(property="status", type="string", example="OK"),
-     *             @OA\Property(property="message", type="string", example="رمز عبور با موفقیت بازنشانی شد.")
+     *             @OA\Property(property="message", type="string", example="کد یکبار مصرف تایید شد.")
      *         )
      *     ),
      *
      *     @OA\Response(
      *         response=400,
-     *         description="خطاهای اعتبارسنجی رخ داده است",
+     *         description="خطاهای اعتبارسنجی",
      *         @OA\JsonContent(
      *             @OA\Property(property="status", type="string", example="ERROR"),
      *             @OA\Property(property="message", type="string", example="خطاهای اعتبارسنجی رخ داده است."),
-     *             @OA\Property(property="data", type="object",
-     *                 @OA\Property(property="phone", type="array", @OA\Items(type="string", example="شماره تلفن باید دقیقاً 11 رقم باشد.")),
-     *                 @OA\Property(property="otp", type="array", @OA\Items(type="string", example="کد یکبار مصرف باید 4 رقم باشد.")),
-     *                 @OA\Property(property="password", type="array", @OA\Items(type="string", example="رمز عبور باید حداقل 8 کاراکتر باشد."))
+     *             @OA\Property(property="errors", type="object",
+     *                 @OA\Property(property="phone", type="array", @OA\Items(type="string", example="شماره تلفن نباید خالی باشد.")),
+     *                 @OA\Property(property="otp", type="array", @OA\Items(type="string", example="کد یکبار مصرف باید 4 رقم باشد."))
      *             )
      *         )
      *     ),
      *
      *     @OA\Response(
      *         response=422,
-     *         description="کد OTP نامعتبر است یا منقضی شده است",
+     *         description="کد OTP نامعتبر است یا منقضی شده است.",
      *         @OA\JsonContent(
      *             @OA\Property(property="status", type="string", example="ERROR"),
      *             @OA\Property(property="message", type="string", example="کد OTP نامعتبر است یا منقضی شده است.")
-     *         )
-     *     ),
-     *
-     *     @OA\Response(
-     *         response=500,
-     *         description="خطای سرور",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="ERROR"),
-     *             @OA\Property(property="message", type="string", example="خطایی در سرور رخ داده است.")
      *         )
      *     )
      * )
@@ -697,6 +691,71 @@ class AuthController extends Controller
         // تایید موفق کد OTP
         return response()->json(new BaseDto(BaseDtoStatusEnum::OK, 'کد یکبار مصرف تایید شد.'), 200);
     }
+    /**
+     * @OA\Post(
+     *     path="/v1/api/reset-password",
+     *     summary="بازنشانی رمز عبور",
+     *     description="این متد برای بازنشانی رمز عبور کاربر استفاده می‌شود و نیازمند شماره تلفن و رمز عبور جدید است.",
+     *     tags={"احراز هویت"},
+     *
+     *     @OA\RequestBody(
+     *         required=true,
+     *         description="شماره تلفن و رمز عبور جدید باید وارد شوند.",
+     *         @OA\JsonContent(
+     *             required={"phone", "password", "password_confirmation"},
+     *             @OA\Property(
+     *                 property="phone",
+     *                 type="string",
+     *                 description="شماره تلفن کاربر",
+     *                 example="09123456789"
+     *             ),
+     *             @OA\Property(
+     *                 property="password",
+     *                 type="string",
+     *                 description="رمز عبور جدید کاربر",
+     *                 example="NewPassword@123"
+     *             ),
+     *             @OA\Property(
+     *                 property="password_confirmation",
+     *                 type="string",
+     *                 description="تایید رمز عبور جدید",
+     *                 example="NewPassword@123"
+     *             )
+     *         )
+     *     ),
+     *
+     *     @OA\Response(
+     *         response=200,
+     *         description="رمز عبور با موفقیت بازنشانی شد.",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="OK"),
+     *             @OA\Property(property="message", type="string", example="رمز عبور با موفقیت بازنشانی شد.")
+     *         )
+     *     ),
+     *
+     *     @OA\Response(
+     *         response=400,
+     *         description="خطاهای اعتبارسنجی",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="ERROR"),
+     *             @OA\Property(property="message", type="string", example="خطاهای اعتبارسنجی رخ داده است."),
+     *             @OA\Property(property="errors", type="object",
+     *                 @OA\Property(property="phone", type="array", @OA\Items(type="string", example="شماره تلفن نباید خالی باشد.")),
+     *                 @OA\Property(property="password", type="array", @OA\Items(type="string", example="رمز عبور باید حداقل 8 کاراکتر باشد."))
+     *             )
+     *         )
+     *     ),
+     *
+     *     @OA\Response(
+     *         response=404,
+     *         description="کاربری با این شماره تلفن وجود ندارد.",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="ERROR"),
+     *             @OA\Property(property="message", type="string", example="کاربری با این شماره تلفن وجود ندارد.")
+     *         )
+     *     )
+     * )
+     */
     public function resetPassword(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -745,64 +804,6 @@ class AuthController extends Controller
 
         return response()->json(new BaseDto(BaseDtoStatusEnum::OK, 'رمز عبور با موفقیت بازنشانی شد.'), 200);
     }
-
-//    public function resetPassword(Request $request)
-//    {
-//        $validator = Validator::make($request->all(), [
-//            'phone' => 'required|regex:/^09[0-9]{9}$/|digits:11',
-//            'otp' => 'required|digits:4',
-//            'password' => [
-//                'required',
-//                'min:8',
-//                'confirmed', 'regex:/[a-z]/', 'regex:/[A-Z]/', 'regex:/[0-9]/', 'regex:/[@$!%*#?&]/'
-//            ]
-//        ], [
-//            'phone.required' => 'شماره تلفن نباید خالی باشد.',
-//            'phone.regex' => 'شماره تلفن باید با 09 شروع شود و 11 رقم باشد.',
-//            'phone.digits' => 'شماره تلفن باید دقیقاً 11 رقم باشد.',
-//            'otp.required' => 'کد یکبار مصرف را وارد کنید.',
-//            'otp.digits' => 'کد یکبار مصرف باید 4 رقم باشد.',
-//            'password.required' => 'رمز عبور نباید خالی باشد.',
-//            'password.min' => 'رمز عبور باید حداقل 8 کاراکتر باشد.',
-//            'password.confirmed' => 'رمز عبور و تأیید آن مطابقت ندارند.',
-//            'password.regex' => [
-//                'regex:/[a-z]/' => 'رمز عبور باید حداقل یک حرف کوچک داشته باشد.',
-//                'regex:/[A-Z]/' => 'رمز عبور باید حداقل یک حرف بزرگ داشته باشد.',
-//                'regex:/[0-9]/' => 'رمز عبور باید حداقل یک عدد داشته باشد.',
-//                'regex:/[@$!%*#?&]/' => 'رمز عبور باید حداقل یک کاراکتر خاص (مثل @$!%*#?&) داشته باشد.',
-//            ]
-//        ]);
-//        if ($validator->fails()) {
-//            $errors = $validator->errors()->toArray();
-//
-//            return response()->json(new BaseDto(
-//                BaseDtoStatusEnum::ERROR,
-//                'خطاهای اعتبارسنجی رخ داده است.',
-//                $errors
-//            ), 400);
-//        }
-//        // جستجوی کد OTP در دیتابیس
-//        $otpRecord = Otp::query()
-//            ->where('phone', $request->phone)
-//            ->where('otp', $request->otp)
-//            ->where('created_at', '>=', now()->subMinutes(2)) // بررسی زمان معتبر بودن کد
-//            ->first();
-//
-//        if (!$otpRecord) {
-//            return response()->json(new BaseDto(BaseDtoStatusEnum::ERROR,'کد OTP نامعتبر است یا منقضی شده است.'), 422);
-//        }
-//
-//        // بروزرسانی رمز عبور کاربر
-//        $user = User::query()->where('phone', $request->phone)->first();
-//        $user->update(['password' => Hash::make($request->password)]);
-//
-//        // حذف رکورد OTP بعد از استفاده
-//        $otpRecord->delete();
-//
-//        return response()->json(new BaseDto(BaseDtoStatusEnum::OK,'رمز عبور با موفقیت بازنشانی شد.'),
-//            200);
-//    }
-
     private function sendOtp($phone, $otp)
     {
         // ارسال OTP به شماره تلفن

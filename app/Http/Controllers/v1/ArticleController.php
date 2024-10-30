@@ -35,7 +35,7 @@ class ArticleController extends Controller
             'cultural' => 'فرهنگی',
             'tourism' => 'گردشگری',
             'religious' => 'مذهبی',
-            'food' => 'غذا',
+            'food' => 'غذا و خوراکی',
             'fun' => 'تفریحی',
             'tourism news' => 'اخبار گردشگری',
             'celebrities' => 'مشاهیر'
@@ -282,15 +282,47 @@ class ArticleController extends Controller
             $articles
         ), 200);
     }
-
     /**
      * @OA\Get(
-     *     path="/api/v1/articles/pending",
-     *     summary="دریافت مقالات در انتظار تایید",
+     *     path="/api/v1/articles-all",
+     *     summary="نمایش مقالات در حال انتظار",
      *     tags={"مقالات"},
+     *     @OA\Parameter(
+     *         name="page",
+     *         in="query",
+     *         description="شماره صفحه",
+     *         required=false,
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
      *     @OA\Response(
      *         response=200,
-     *         description="لیست مقالات در انتظار تایید با موفقیت بازیابی شد.",
+     *         description="لیست مقالات با موفقیت بازیابی شد.",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="OK"),
+     *             @OA\Property(property="message", type="string", example="مقاله با موفقیت پیدا شد."),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="article_id", type="integer", example=1),
+     *                 @OA\Property(property="title", type="string", example="عنوان مقاله"),
+     *                 @OA\Property(property="description", type="string", example="توضیحات مقاله"),
+     *                 @OA\Property(property="abstract", type="string", example="خلاصه‌ای از مقاله"),
+     *                 @OA\Property(property="cover_image", type="string", nullable=true, example="http://example.com/images/cover.jpg"),
+     *                 @OA\Property(property="category_id", type="integer", example=1),
+     *                 @OA\Property(property="category_name", type="string", example="نام دسته‌بندی"),
+     *                 @OA\Property(property="created_at", type="string", format="date-time", example="2024-10-31 12:00"),
+     *                 @OA\Property(
+     *                     property="author",
+     *                     type="object",
+     *                     @OA\Property(property="name", type="string", nullable=true, example="نام نویسنده"),
+     *                     @OA\Property(property="avatar", type="string", nullable=true, example="http://example.com/images/avatar.jpg")
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="مقاله‌ای یافت نشد."
      *     )
      * )
      */
@@ -324,7 +356,50 @@ class ArticleController extends Controller
             $responseData
         ), 200);
     }
-
+    /**
+     * @OA\Get(
+     *     path="/api/v1/article/{id}",
+     *     summary="نمایش جزئیات یک مقاله",
+     *     tags={"مقالات"},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         description="شناسه مقاله",
+     *         required=true,
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="مقاله با موفقیت بازیابی شد.",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="OK"),
+     *             @OA\Property(property="message", type="string", example="مقاله با موفقیت پیدا شد."),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="article_id", type="integer", example=1),
+     *                 @OA\Property(property="title", type="string", example="عنوان مقاله"),
+     *                 @OA\Property(property="description", type="string", example="توضیحات مقاله"),
+     *                 @OA\Property(property="abstract", type="string", example="خلاصه‌ای از مقاله"),
+     *                 @OA\Property(property="cover_image", type="string", nullable=true, example="http://example.com/images/cover.jpg"),
+     *                 @OA\Property(property="category_id", type="integer", example=1),
+     *                 @OA\Property(property="category_name", type="string", example="نام دسته‌بندی"),
+     *                 @OA\Property(property="created_at", type="string", format="date-time", example="2024-10-31 12:00"),
+     *                 @OA\Property(
+     *                     property="author",
+     *                     type="object",
+     *                     @OA\Property(property="name", type="string", nullable=true, example="نام نویسنده"),
+     *                     @OA\Property(property="avatar", type="string", nullable=true, example="http://example.com/images/avatar.jpg")
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="مقاله‌ای با این شناسه یافت نشد."
+     *     )
+     * )
+     */
     public function show($id)
     {
         // جستجو برای مقاله با شناسه مشخص
@@ -397,6 +472,61 @@ class ArticleController extends Controller
             'status' => 'success'
         ]);
     }
+    /**
+     * @OA\Get(
+     *     path="/api/v1/articles/search",
+     *     summary="جستجوی مقالات",
+     *     tags={"مقالات"},
+     *     @OA\Parameter(
+     *         name="query",
+     *         in="query",
+     *         description="کلیدواژه‌های جستجو برای عنوان و توضیحات مقالات",
+     *         required=false,
+     *         @OA\Schema(type="string", example="مقاله")
+     *     ),
+     *     @OA\Parameter(
+     *         name="category_ids",
+     *         in="query",
+     *         description="شناسه‌های دسته‌بندی برای فیلتر کردن مقالات (با کاما جدا شده)",
+     *         required=false,
+     *         @OA\Schema(type="string", example="1,2")
+     *     ),
+     *     @OA\Parameter(
+     *         name="status",
+     *         in="query",
+     *         description="وضعیت مقاله (مثلاً published, pending)",
+     *         required=false,
+     *         @OA\Schema(type="string", example="published")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="نتایج جستجو با موفقیت بارگذاری شد.",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="OK"),
+     *             @OA\Property(property="message", type="string", example="نتایج جستجو با موفقیت بارگذاری شد."),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="array",
+     *                 @OA\Items(
+     *                     type="object",
+     *                     @OA\Property(property="article_id", type="integer", example=1),
+     *                     @OA\Property(property="title", type="string", example="عنوان مقاله"),
+     *                     @OA\Property(property="description", type="string", example="توضیحات مقاله"),
+     *                     @OA\Property(property="abstract", type="string", example="خلاصه‌ای از مقاله"),
+     *                     @OA\Property(property="cover_image", type="string", nullable=true, example="http://example.com/images/cover.jpg"),
+     *                     @OA\Property(property="category_id", type="integer", example=1),
+     *                     @OA\Property(property="category_name", type="string", example="نام دسته‌بندی"),
+     *                     @OA\Property(property="created_at", type="string", format="date-time", example="2024-10-31 12:00")
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="مقاله‌ای با شرایط مشخص شده یافت نشد."
+     *     )
+     * )
+     */
     public function search(Request $request)
     {
         $query = Article::query();
@@ -454,7 +584,36 @@ class ArticleController extends Controller
             $formattedArticles
         ), 200);
     }
-
+    /**
+     * @OA\Get(
+     *     path="/api/v1/articles/new",
+     *     summary="دریافت مقالات جدید",
+     *     tags={"مقالات"},
+     *     @OA\Response(
+     *         response=200,
+     *         description="آخرین مقالات با موفقیت بارگذاری شد.",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="OK"),
+     *             @OA\Property(property="message", type="string", example="آخرین مقالات با موفقیت بارگذاری شد."),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="array",
+     *                 @OA\Items(
+     *                     type="object",
+     *                     @OA\Property(property="article_id", type="integer", example=1),
+     *                     @OA\Property(property="title", type="string", example="عنوان مقاله"),
+     *                     @OA\Property(property="description", type="string", example="توضیحات مقاله"),
+     *                     @OA\Property(property="abstract", type="string", example="خلاصه‌ای از مقاله"),
+     *                     @OA\Property(property="cover_image", type="string", nullable=true, example="http://example.com/images/cover.jpg"),
+     *                     @OA\Property(property="category_id", type="integer", example=1),
+     *                     @OA\Property(property="category_name", type="string", example="نام دسته‌بندی"),
+     *                     @OA\Property(property="created_at", type="string", format="date-time", example="2024-10-31 12:00")
+     *                 )
+     *             )
+     *         )
+     *     )
+     * )
+     */
     public function NewArticles()
     {
         $articles = Article::query()
@@ -484,6 +643,36 @@ class ArticleController extends Controller
             $formattedArticles
         ), 200);
     }
+    /**
+     * @OA\Get(
+     *     path="/api/v1/user/articles",
+     *     summary="دریافت مقالات کاربر",
+     *     tags={"مقالات"},
+     *     @OA\Response(
+     *         response=200,
+     *         description="مقالات کاربر با موفقیت بارگذاری شد.",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="OK"),
+     *             @OA\Property(property="message", type="string", example="مقالات کاربر با موفقیت بارگذاری شد."),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="array",
+     *                 @OA\Items(
+     *                     type="object",
+     *                     @OA\Property(property="article_id", type="integer", example=1),
+     *                     @OA\Property(property="title", type="string", example="عنوان مقاله"),
+     *                     @OA\Property(property="description", type="string", example="توضیحات مقاله"),
+     *                     @OA\Property(property="abstract", type="string", example="خلاصه‌ای از مقاله"),
+     *                     @OA\Property(property="cover_image", type="string", nullable=true, example="http://example.com/images/cover.jpg"),
+     *                     @OA\Property(property="category_id", type="integer", example=1),
+     *                     @OA\Property(property="category_name", type="string", example="نام دسته‌بندی"),
+     *                     @OA\Property(property="created_at", type="string", format="date-time", example="2024-10-31 12:00")
+     *                 )
+     *             )
+     *         )
+     *     )
+     * )
+     */
     public function userArticles()
     {
         // فرض کنید کاربر جاری احراز هویت شده و از طریق `auth()->user()` در دسترس است

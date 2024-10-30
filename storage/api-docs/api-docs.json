@@ -171,16 +171,456 @@
                 }
             }
         },
-        "/api/v1/articles/pending": {
+        "/api/v1/articles-all": {
             "get": {
                 "tags": [
                     "مقالات"
                 ],
-                "summary": "دریافت مقالات در انتظار تایید",
-                "operationId": "fd7581adcf55a2738de117d9795b68e7",
+                "summary": "نمایش مقالات در حال انتظار",
+                "operationId": "4aa33b827ce644781637598b4b0bbd94",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "شماره صفحه",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "لیست مقالات در انتظار تایید با موفقیت بازیابی شد."
+                        "description": "لیست مقالات با موفقیت بازیابی شد.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "OK"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "مقاله با موفقیت پیدا شد."
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "article_id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "title": {
+                                                    "type": "string",
+                                                    "example": "عنوان مقاله"
+                                                },
+                                                "description": {
+                                                    "type": "string",
+                                                    "example": "توضیحات مقاله"
+                                                },
+                                                "abstract": {
+                                                    "type": "string",
+                                                    "example": "خلاصه‌ای از مقاله"
+                                                },
+                                                "cover_image": {
+                                                    "type": "string",
+                                                    "example": "http://example.com/images/cover.jpg",
+                                                    "nullable": true
+                                                },
+                                                "category_id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "category_name": {
+                                                    "type": "string",
+                                                    "example": "نام دسته‌بندی"
+                                                },
+                                                "created_at": {
+                                                    "type": "string",
+                                                    "format": "date-time",
+                                                    "example": "2024-10-31 12:00"
+                                                },
+                                                "author": {
+                                                    "properties": {
+                                                        "name": {
+                                                            "type": "string",
+                                                            "example": "نام نویسنده",
+                                                            "nullable": true
+                                                        },
+                                                        "avatar": {
+                                                            "type": "string",
+                                                            "example": "http://example.com/images/avatar.jpg",
+                                                            "nullable": true
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "مقاله‌ای یافت نشد."
+                    }
+                }
+            }
+        },
+        "/api/v1/article/{id}": {
+            "get": {
+                "tags": [
+                    "مقالات"
+                ],
+                "summary": "نمایش جزئیات یک مقاله",
+                "operationId": "6f971db6a07592c2da57b724f65584fe",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "شناسه مقاله",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "مقاله با موفقیت بازیابی شد.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "OK"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "مقاله با موفقیت پیدا شد."
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "article_id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "title": {
+                                                    "type": "string",
+                                                    "example": "عنوان مقاله"
+                                                },
+                                                "description": {
+                                                    "type": "string",
+                                                    "example": "توضیحات مقاله"
+                                                },
+                                                "abstract": {
+                                                    "type": "string",
+                                                    "example": "خلاصه‌ای از مقاله"
+                                                },
+                                                "cover_image": {
+                                                    "type": "string",
+                                                    "example": "http://example.com/images/cover.jpg",
+                                                    "nullable": true
+                                                },
+                                                "category_id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "category_name": {
+                                                    "type": "string",
+                                                    "example": "نام دسته‌بندی"
+                                                },
+                                                "created_at": {
+                                                    "type": "string",
+                                                    "format": "date-time",
+                                                    "example": "2024-10-31 12:00"
+                                                },
+                                                "author": {
+                                                    "properties": {
+                                                        "name": {
+                                                            "type": "string",
+                                                            "example": "نام نویسنده",
+                                                            "nullable": true
+                                                        },
+                                                        "avatar": {
+                                                            "type": "string",
+                                                            "example": "http://example.com/images/avatar.jpg",
+                                                            "nullable": true
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "مقاله‌ای با این شناسه یافت نشد."
+                    }
+                }
+            }
+        },
+        "/api/v1/articles/search": {
+            "get": {
+                "tags": [
+                    "مقالات"
+                ],
+                "summary": "جستجوی مقالات",
+                "operationId": "6430a00872a8ce7072d4bcf900d84859",
+                "parameters": [
+                    {
+                        "name": "query",
+                        "in": "query",
+                        "description": "کلیدواژه‌های جستجو برای عنوان و توضیحات مقالات",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "مقاله"
+                        }
+                    },
+                    {
+                        "name": "category_ids",
+                        "in": "query",
+                        "description": "شناسه‌های دسته‌بندی برای فیلتر کردن مقالات (با کاما جدا شده)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "1,2"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "وضعیت مقاله (مثلاً published, pending)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "published"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "نتایج جستجو با موفقیت بارگذاری شد.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "OK"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "نتایج جستجو با موفقیت بارگذاری شد."
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "article_id": {
+                                                        "type": "integer",
+                                                        "example": 1
+                                                    },
+                                                    "title": {
+                                                        "type": "string",
+                                                        "example": "عنوان مقاله"
+                                                    },
+                                                    "description": {
+                                                        "type": "string",
+                                                        "example": "توضیحات مقاله"
+                                                    },
+                                                    "abstract": {
+                                                        "type": "string",
+                                                        "example": "خلاصه‌ای از مقاله"
+                                                    },
+                                                    "cover_image": {
+                                                        "type": "string",
+                                                        "example": "http://example.com/images/cover.jpg",
+                                                        "nullable": true
+                                                    },
+                                                    "category_id": {
+                                                        "type": "integer",
+                                                        "example": 1
+                                                    },
+                                                    "category_name": {
+                                                        "type": "string",
+                                                        "example": "نام دسته‌بندی"
+                                                    },
+                                                    "created_at": {
+                                                        "type": "string",
+                                                        "format": "date-time",
+                                                        "example": "2024-10-31 12:00"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "مقاله‌ای با شرایط مشخص شده یافت نشد."
+                    }
+                }
+            }
+        },
+        "/api/v1/articles/new": {
+            "get": {
+                "tags": [
+                    "مقالات"
+                ],
+                "summary": "دریافت مقالات جدید",
+                "operationId": "010a7cce6ca97a1a689582e8aed596e3",
+                "responses": {
+                    "200": {
+                        "description": "آخرین مقالات با موفقیت بارگذاری شد.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "OK"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "آخرین مقالات با موفقیت بارگذاری شد."
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "article_id": {
+                                                        "type": "integer",
+                                                        "example": 1
+                                                    },
+                                                    "title": {
+                                                        "type": "string",
+                                                        "example": "عنوان مقاله"
+                                                    },
+                                                    "description": {
+                                                        "type": "string",
+                                                        "example": "توضیحات مقاله"
+                                                    },
+                                                    "abstract": {
+                                                        "type": "string",
+                                                        "example": "خلاصه‌ای از مقاله"
+                                                    },
+                                                    "cover_image": {
+                                                        "type": "string",
+                                                        "example": "http://example.com/images/cover.jpg",
+                                                        "nullable": true
+                                                    },
+                                                    "category_id": {
+                                                        "type": "integer",
+                                                        "example": 1
+                                                    },
+                                                    "category_name": {
+                                                        "type": "string",
+                                                        "example": "نام دسته‌بندی"
+                                                    },
+                                                    "created_at": {
+                                                        "type": "string",
+                                                        "format": "date-time",
+                                                        "example": "2024-10-31 12:00"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/user/articles": {
+            "get": {
+                "tags": [
+                    "مقالات"
+                ],
+                "summary": "دریافت مقالات کاربر",
+                "operationId": "4451ccf2695b4a79a6f5452f605ac4d1",
+                "responses": {
+                    "200": {
+                        "description": "مقالات کاربر با موفقیت بارگذاری شد.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "OK"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "مقالات کاربر با موفقیت بارگذاری شد."
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "article_id": {
+                                                        "type": "integer",
+                                                        "example": 1
+                                                    },
+                                                    "title": {
+                                                        "type": "string",
+                                                        "example": "عنوان مقاله"
+                                                    },
+                                                    "description": {
+                                                        "type": "string",
+                                                        "example": "توضیحات مقاله"
+                                                    },
+                                                    "abstract": {
+                                                        "type": "string",
+                                                        "example": "خلاصه‌ای از مقاله"
+                                                    },
+                                                    "cover_image": {
+                                                        "type": "string",
+                                                        "example": "http://example.com/images/cover.jpg",
+                                                        "nullable": true
+                                                    },
+                                                    "category_id": {
+                                                        "type": "integer",
+                                                        "example": 1
+                                                    },
+                                                    "category_name": {
+                                                        "type": "string",
+                                                        "example": "نام دسته‌بندی"
+                                                    },
+                                                    "created_at": {
+                                                        "type": "string",
+                                                        "format": "date-time",
+                                                        "example": "2024-10-31 12:00"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -694,14 +1134,18 @@
                 "tags": [
                     "احراز هویت"
                 ],
-                "summary": "فراموشی رمز عبور",
-                "description": "ارسال کد یکبار مصرف (OTP) برای بازنشانی رمز عبور به شماره تلفن کاربر.",
+                "summary": "بازیابی رمز عبور با ارسال OTP",
+                "description": "این متد برای ارسال کد OTP به شماره تلفن کاربر به منظور بازیابی رمز عبور استفاده می‌شود. شماره تلفن باید معتبر باشد و زمان بین درخواست‌های OTP کنترل می‌شود.",
                 "operationId": "08924868a83b64013882817a56ee76bf",
                 "requestBody": {
+                    "description": "شماره تلفن باید وارد شود و باید با 09 شروع و 11 رقم باشد.",
                     "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
+                                "required": [
+                                    "phone"
+                                ],
                                 "properties": {
                                     "phone": {
                                         "description": "شماره تلفن کاربر",
@@ -716,7 +1160,7 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "کد یکبار مصرف برای بازنشانی رمز عبور ارسال شد",
+                        "description": "OTP با موفقیت ارسال شد یا درخواست زودهنگام برای OTP.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -727,14 +1171,29 @@
                                         },
                                         "message": {
                                             "type": "string",
-                                            "example": "کد یکبار مصرف برای بازنشانی رمز عبور ارسال شد."
+                                            "example": "کد ارسال شد."
                                         },
                                         "data": {
                                             "properties": {
+                                                "phone": {
+                                                    "type": "string",
+                                                    "example": "09123456789"
+                                                },
                                                 "otp_ttl": {
-                                                    "description": "زمان باقیمانده برای اعتبار کد OTP به ثانیه",
                                                     "type": "integer",
                                                     "example": 120
+                                                },
+                                                "has_account": {
+                                                    "type": "boolean",
+                                                    "example": false
+                                                },
+                                                "has_password": {
+                                                    "type": "boolean",
+                                                    "example": false
+                                                },
+                                                "otp_request_error": {
+                                                    "type": "string",
+                                                    "example": "تا 80 ثانیه دیگر نمی‌توانید درخواست جدید بدهید."
                                                 }
                                             },
                                             "type": "object"
@@ -746,7 +1205,7 @@
                         }
                     },
                     "400": {
-                        "description": "خطاهای اعتبارسنجی رخ داده است",
+                        "description": "خطاهای اعتبارسنجی",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -759,13 +1218,13 @@
                                             "type": "string",
                                             "example": "خطاهای اعتبارسنجی رخ داده است."
                                         },
-                                        "data": {
+                                        "errors": {
                                             "properties": {
                                                 "phone": {
                                                     "type": "array",
                                                     "items": {
                                                         "type": "string",
-                                                        "example": "شماره تلفن باید دقیقاً 11 رقم باشد."
+                                                        "example": "شماره تلفن نباید خالی باشد."
                                                     }
                                                 }
                                             },
@@ -778,7 +1237,7 @@
                         }
                     },
                     "404": {
-                        "description": "کاربری با این شماره تلفن وجود ندارد",
+                        "description": "کاربری با این شماره تلفن وجود ندارد.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -790,36 +1249,6 @@
                                         "message": {
                                             "type": "string",
                                             "example": "کاربری با این شماره تلفن وجود ندارد."
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "429": {
-                        "description": "لطفاً قبل از درخواست جدید دو دقیقه صبر کنید.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "ERROR"
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "لطفاً قبل از درخواست جدید دو دقیقه صبر کنید."
-                                        },
-                                        "data": {
-                                            "properties": {
-                                                "otp_ttl": {
-                                                    "description": "زمان باقی‌مانده برای درخواست جدید",
-                                                    "type": "integer",
-                                                    "example": 120
-                                                }
-                                            },
-                                            "type": "object"
                                         }
                                     },
                                     "type": "object"
@@ -839,7 +1268,125 @@
                                         },
                                         "message": {
                                             "type": "string",
-                                            "example": "خطایی در سرور رخ داده است."
+                                            "example": "خطای سرور رخ داده است."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/api/verify-otp-forget": {
+            "post": {
+                "tags": [
+                    "احراز هویت"
+                ],
+                "summary": "تایید کد OTP برای بازنشانی رمز عبور",
+                "description": "این متد برای تایید کد OTP ارسال‌شده به شماره تلفن کاربر به منظور بازنشانی رمز عبور استفاده می‌شود.",
+                "operationId": "03cbd3dab6ed4ee7b449d8267e119dfa",
+                "requestBody": {
+                    "description": "شماره تلفن و کد OTP باید وارد شوند.",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "phone",
+                                    "otp"
+                                ],
+                                "properties": {
+                                    "phone": {
+                                        "description": "شماره تلفن کاربر",
+                                        "type": "string",
+                                        "example": "09123456789"
+                                    },
+                                    "otp": {
+                                        "description": "کد OTP ارسال شده به کاربر",
+                                        "type": "string",
+                                        "example": "1234"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "کد یکبار مصرف تایید شد.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "OK"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "کد یکبار مصرف تایید شد."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "خطاهای اعتبارسنجی",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "ERROR"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "خطاهای اعتبارسنجی رخ داده است."
+                                        },
+                                        "errors": {
+                                            "properties": {
+                                                "phone": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string",
+                                                        "example": "شماره تلفن نباید خالی باشد."
+                                                    }
+                                                },
+                                                "otp": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string",
+                                                        "example": "کد یکبار مصرف باید 4 رقم باشد."
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "کد OTP نامعتبر است یا منقضی شده است.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "ERROR"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "کد OTP نامعتبر است یا منقضی شده است."
                                         }
                                     },
                                     "type": "object"
@@ -856,33 +1403,34 @@
                     "احراز هویت"
                 ],
                 "summary": "بازنشانی رمز عبور",
-                "description": "بازنشانی رمز عبور کاربر با استفاده از کد یکبار مصرف (OTP) ارسال شده به شماره تلفن.",
+                "description": "این متد برای بازنشانی رمز عبور کاربر استفاده می‌شود و نیازمند شماره تلفن و رمز عبور جدید است.",
                 "operationId": "3a1fbcaaee0263925b8bd2f170b283af",
                 "requestBody": {
+                    "description": "شماره تلفن و رمز عبور جدید باید وارد شوند.",
                     "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
+                                "required": [
+                                    "phone",
+                                    "password",
+                                    "password_confirmation"
+                                ],
                                 "properties": {
                                     "phone": {
                                         "description": "شماره تلفن کاربر",
                                         "type": "string",
                                         "example": "09123456789"
                                     },
-                                    "otp": {
-                                        "description": "کد یکبار مصرف ارسال شده به کاربر",
-                                        "type": "string",
-                                        "example": "1234"
-                                    },
                                     "password": {
-                                        "description": "رمز عبور جدید",
+                                        "description": "رمز عبور جدید کاربر",
                                         "type": "string",
-                                        "example": "P@ssw0rd"
+                                        "example": "NewPassword@123"
                                     },
                                     "password_confirmation": {
-                                        "description": "تأیید رمز عبور",
+                                        "description": "تایید رمز عبور جدید",
                                         "type": "string",
-                                        "example": "P@ssw0rd"
+                                        "example": "NewPassword@123"
                                     }
                                 },
                                 "type": "object"
@@ -892,7 +1440,7 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "رمز عبور با موفقیت بازنشانی شد",
+                        "description": "رمز عبور با موفقیت بازنشانی شد.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -912,7 +1460,7 @@
                         }
                     },
                     "400": {
-                        "description": "خطاهای اعتبارسنجی رخ داده است",
+                        "description": "خطاهای اعتبارسنجی",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -925,20 +1473,13 @@
                                             "type": "string",
                                             "example": "خطاهای اعتبارسنجی رخ داده است."
                                         },
-                                        "data": {
+                                        "errors": {
                                             "properties": {
                                                 "phone": {
                                                     "type": "array",
                                                     "items": {
                                                         "type": "string",
-                                                        "example": "شماره تلفن باید دقیقاً 11 رقم باشد."
-                                                    }
-                                                },
-                                                "otp": {
-                                                    "type": "array",
-                                                    "items": {
-                                                        "type": "string",
-                                                        "example": "کد یکبار مصرف باید 4 رقم باشد."
+                                                        "example": "شماره تلفن نباید خالی باشد."
                                                     }
                                                 },
                                                 "password": {
@@ -957,8 +1498,8 @@
                             }
                         }
                     },
-                    "422": {
-                        "description": "کد OTP نامعتبر است یا منقضی شده است",
+                    "404": {
+                        "description": "کاربری با این شماره تلفن وجود ندارد.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -969,27 +1510,7 @@
                                         },
                                         "message": {
                                             "type": "string",
-                                            "example": "کد OTP نامعتبر است یا منقضی شده است."
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "خطای سرور",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "ERROR"
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "خطایی در سرور رخ داده است."
+                                            "example": "کاربری با این شماره تلفن وجود ندارد."
                                         }
                                     },
                                     "type": "object"
@@ -1074,14 +1595,14 @@
                 }
             }
         },
-        "/api/v1/notifications/{id}/mark-as-read": {
+        "/api/v1//notifications/{id}/read": {
             "patch": {
                 "tags": [
                     "اعلانات"
                 ],
                 "summary": "علامت‌گذاری اعلان به عنوان خوانده شده",
                 "description": "این متد یک اعلان خاص را برای کاربر به عنوان خوانده شده علامت‌گذاری می‌کند.",
-                "operationId": "e3cd1fdb329a05614dc4d36eaf05a18e",
+                "operationId": "6bc111f1ba0cd71e26d2962627884e9a",
                 "parameters": [
                     {
                         "name": "id",
@@ -1748,6 +2269,606 @@
                     }
                 ]
             }
+        },
+        "/api/v1/tickets": {
+            "get": {
+                "tags": [
+                    "Tickets"
+                ],
+                "summary": "دریافت لیست تیکت‌ها",
+                "description": "این متد لیست تیکت‌ها را بر اساس نقش کاربر (مدیر یا کاربر) نمایش می‌دهد.",
+                "operationId": "687cb3d4766d4523828bf9265c460503",
+                "responses": {
+                    "200": {
+                        "description": "لیست تیکت‌ها با موفقیت دریافت شد",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "ok"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer",
+                                                        "example": 1
+                                                    },
+                                                    "title": {
+                                                        "type": "string",
+                                                        "example": "مشکل در ورود به سایت"
+                                                    },
+                                                    "priority": {
+                                                        "type": "string",
+                                                        "example": "high"
+                                                    },
+                                                    "status": {
+                                                        "type": "string",
+                                                        "example": "open"
+                                                    },
+                                                    "created_at": {
+                                                        "type": "string",
+                                                        "format": "date-time"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Tickets"
+                ],
+                "summary": "ایجاد تیکت جدید",
+                "description": "این متد یک تیکت جدید ایجاد می‌کند.",
+                "operationId": "276e90e0ac7a0c95dc1111a965afb492",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "title",
+                                    "priority",
+                                    "description"
+                                ],
+                                "properties": {
+                                    "title": {
+                                        "type": "string",
+                                        "example": "مشکل در ورود به سایت"
+                                    },
+                                    "priority": {
+                                        "type": "string",
+                                        "enum": [
+                                            "low",
+                                            "medium",
+                                            "high"
+                                        ],
+                                        "example": "high"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "نمیتوانم وارد سایت شوم."
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "تیکت با موفقیت ایجاد شد",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "ok"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "تیکت با موفقیت ایجاد شد."
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "title": {
+                                                    "type": "string",
+                                                    "example": "مشکل در ورود به سایت"
+                                                },
+                                                "priority": {
+                                                    "type": "string",
+                                                    "example": "high"
+                                                },
+                                                "status": {
+                                                    "type": "string",
+                                                    "example": "open"
+                                                },
+                                                "created_at": {
+                                                    "type": "string",
+                                                    "format": "date-time"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "خطاهای اعتبارسنجی",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "error"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "خطاهای اعتبارسنجی رخ داده است."
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/tickets/{ticketId}/messages": {
+            "get": {
+                "tags": [
+                    "Tickets"
+                ],
+                "summary": "دریافت پیام‌های یک تیکت",
+                "description": "این متد تمام پیام‌های یک تیکت خاص را برمی‌گرداند.",
+                "operationId": "1d4bd0d9ca898710c0b5df2fc44b615d",
+                "parameters": [
+                    {
+                        "name": "ticketId",
+                        "in": "path",
+                        "description": "شناسه تیکت",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "پیام‌ها با موفقیت دریافت شد",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "ok"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer",
+                                                        "example": 1
+                                                    },
+                                                    "ticket_id": {
+                                                        "type": "integer",
+                                                        "example": 1
+                                                    },
+                                                    "creator_id": {
+                                                        "type": "integer",
+                                                        "example": 2
+                                                    },
+                                                    "creator_role": {
+                                                        "type": "string",
+                                                        "example": "user"
+                                                    },
+                                                    "message": {
+                                                        "type": "string",
+                                                        "example": "مشکل همچنان وجود دارد."
+                                                    },
+                                                    "is_read": {
+                                                        "type": "boolean",
+                                                        "example": false
+                                                    },
+                                                    "created_at": {
+                                                        "type": "string",
+                                                        "format": "date-time"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "کاربر اجازه دسترسی به این تیکت را ندارد",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "error"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Unauthorized"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Tickets"
+                ],
+                "summary": "ایجاد پیام جدید برای تیکت",
+                "description": "این متد پیامی جدید برای یک تیکت خاص ایجاد می‌کند.",
+                "operationId": "2a7648a6ec5b6fedf62fc612397a3feb",
+                "parameters": [
+                    {
+                        "name": "ticketId",
+                        "in": "path",
+                        "description": "شناسه تیکت",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "message"
+                                ],
+                                "properties": {
+                                    "message": {
+                                        "type": "string",
+                                        "example": "مشکل همچنان وجود دارد."
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "پیام جدید با موفقیت ایجاد شد",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "ok"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "message": {
+                                                    "type": "string",
+                                                    "example": "مشکل همچنان وجود دارد."
+                                                },
+                                                "user_role": {
+                                                    "type": "string",
+                                                    "example": "user"
+                                                },
+                                                "user_name": {
+                                                    "type": "string",
+                                                    "example": "علی"
+                                                },
+                                                "created_at": {
+                                                    "type": "string",
+                                                    "format": "date-time"
+                                                },
+                                                "ticket_id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "کاربر اجازه دسترسی به این تیکت را ندارد",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "error"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Unauthorized"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/upload-new-image": {
+            "post": {
+                "tags": [
+                    "تصاویر"
+                ],
+                "summary": "آپلود تصویر جدید",
+                "description": "این متد تصویر ارسالی از سیکاادیتور آپلود می‌کند و اطلاعات آن را در دیتابیس ذخیره می‌کند.",
+                "operationId": "550889ec60be924f25870c45a4432c6c",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "properties": {
+                                    "image": {
+                                        "description": "فایل تصویری برای آپلود",
+                                        "type": "string",
+                                        "format": "binary"
+                                    },
+                                    "is_default": {
+                                        "description": "تعیین این تصویر به عنوان تصویر پیش‌فرض",
+                                        "type": "boolean"
+                                    },
+                                    "user_id": {
+                                        "description": "شناسه کاربر مرتبط با تصویر (در صورت نیاز)",
+                                        "type": "integer"
+                                    },
+                                    "article_id": {
+                                        "description": "شناسه مقاله مرتبط با تصویر (در صورت نیاز)",
+                                        "type": "integer"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "اطلاعات تصویر آپلود شده",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "image": {
+                                            "description": "نام فایل تصویر",
+                                            "type": "string",
+                                            "example": "1632938402.jpg"
+                                        },
+                                        "url": {
+                                            "description": "مسیر فایل تصویر",
+                                            "type": "string",
+                                            "example": "images/1632938402.jpg"
+                                        },
+                                        "status": {
+                                            "description": "وضعیت آپلود",
+                                            "type": "string",
+                                            "example": "success"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "خطای اعتبارسنجی",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "The given data was invalid."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/upload/cover": {
+            "post": {
+                "tags": [
+                    "عکس‌ها"
+                ],
+                "summary": "آپلود کاور مقاله به صورت موقت",
+                "operationId": "5e69471e4da1fbad1c985897d1e0671a",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "properties": {
+                                    "cover_image": {
+                                        "description": "فایل عکس کاور",
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "عکس به صورت موقتی ذخیره شد.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "عکس به صورت موقتی ذخیره شد."
+                                        },
+                                        "image_id": {
+                                            "type": "integer",
+                                            "example": 1
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "خطا در آپلود عکس"
+                    }
+                }
+            }
+        },
+        "/api/v1/update/cover": {
+            "post": {
+                "tags": [
+                    "عکس‌ها"
+                ],
+                "summary": "به‌روزرسانی کاور مقاله با عکس موقتی",
+                "operationId": "5ab6143112617fafdc35506d2217917b",
+                "parameters": [
+                    {
+                        "name": "articleId",
+                        "in": "path",
+                        "description": "شناسه مقاله",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "temporary_image_id": {
+                                        "description": "شناسه عکس موقت",
+                                        "type": "integer",
+                                        "example": 1
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "کاور مقاله با موفقیت به‌روزرسانی شد.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "کاور مقاله با موفقیت به‌روزرسانی شد."
+                                        },
+                                        "image_id": {
+                                            "type": "integer",
+                                            "example": 1
+                                        },
+                                        "image_path": {
+                                            "type": "string",
+                                            "example": "images/cover.jpg"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "شما مجاز به ویرایش این مقاله نیستید."
+                    },
+                    "404": {
+                        "description": "عکس موقتی یافت نشد."
+                    },
+                    "500": {
+                        "description": "خطا در به‌روزرسانی کاور"
+                    }
+                }
+            }
         }
     },
     "tags": [
@@ -1766,6 +2887,18 @@
         {
             "name": "پروفایل",
             "description": "پروفایل"
+        },
+        {
+            "name": "Tickets",
+            "description": "Tickets"
+        },
+        {
+            "name": "تصاویر",
+            "description": "تصاویر"
+        },
+        {
+            "name": "عکس‌ها",
+            "description": "عکس‌ها"
         }
     ]
 }

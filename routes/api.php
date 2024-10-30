@@ -40,6 +40,7 @@ Route::group([
     Route::patch('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->middleware('auth:api');
 
     Route::post('/tickets', [TicketController::class, 'store'])->middleware('auth:api');
+    Route::get('/tickets', [TicketController::class, 'index'])->middleware('auth:api');
     Route::post('/tickets/{ticketId}/messages', [TicketController::class, 'storeMessage'])->middleware('auth:api');
     Route::get('/tickets/{ticketId}/messages', [TicketController::class, 'getMessages'])->middleware('auth:api');
 });

@@ -10,6 +10,63 @@ use Illuminate\Http\Request;
 
 class UploadController extends Controller
 {
+    /**
+     * @OA\Post(
+     *     path="/api/v1/upload-new-image",
+     *     summary="آپلود تصویر جدید",
+     *     description="این متد تصویر ارسالی از سیکاادیتور آپلود می‌کند و اطلاعات آن را در دیتابیس ذخیره می‌کند.",
+     *     tags={"تصاویر"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\MediaType(
+     *             mediaType="multipart/form-data",
+     *             @OA\Schema(
+     *                 @OA\Property(
+     *                     property="image",
+     *                     type="string",
+     *                     format="binary",
+     *                     description="فایل تصویری برای آپلود"
+     *                 ),
+     *                 @OA\Property(
+     *                     property="is_default",
+     *                     type="boolean",
+     *                     description="تعیین این تصویر به عنوان تصویر پیش‌فرض"
+     *                 ),
+     *                 @OA\Property(
+     *                     property="user_id",
+     *                     type="integer",
+     *                     description="شناسه کاربر مرتبط با تصویر (در صورت نیاز)"
+     *                 ),
+     *                 @OA\Property(
+     *                     property="article_id",
+     *                     type="integer",
+     *                     description="شناسه مقاله مرتبط با تصویر (در صورت نیاز)"
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="اطلاعات تصویر آپلود شده",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="image", type="string", example="1632938402.jpg", description="نام فایل تصویر"),
+     *             @OA\Property(property="url", type="string", example="images/1632938402.jpg", description="مسیر فایل تصویر"),
+     *             @OA\Property(property="status", type="string", example="success", description="وضعیت آپلود")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="خطای اعتبارسنجی",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="message", type="string", example="The given data was invalid.")
+     *         )
+     *     ),
+     *     @OA\Response(response=401, description="Unauthorized"),
+     *     security={{"bearerAuth":{}}}
+     * )
+     */
     public function uploadImagenew(Request $request)
     {
         // اعتبارسنجی ورودی
@@ -44,7 +101,39 @@ class UploadController extends Controller
 
         ]);
     }
-
+    /**
+     * @OA\Post(
+     *     path="/api/v1/upload/cover",
+     *     summary="آپلود کاور مقاله به صورت موقت",
+     *     tags={"عکس‌ها"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\MediaType(
+     *             mediaType="multipart/form-data",
+     *             @OA\Schema(
+     *                 @OA\Property(
+     *                     property="cover_image",
+     *                     type="string",
+     *                     format="binary",
+     *                     description="فایل عکس کاور"
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="عکس به صورت موقتی ذخیره شد.",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="عکس به صورت موقتی ذخیره شد."),
+     *             @OA\Property(property="image_id", type="integer", example=1)
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="خطا در آپلود عکس"
+     *     )
+     * )
+     */
     public function uploadTemporaryCover(Request $request)
     {
         // اعتبارسنجی عکس
@@ -72,6 +161,52 @@ class UploadController extends Controller
             ], 500);
         }
     }
+    /**
+     * @OA\Post(
+     *     path="/api/v1/update/cover",
+     *     summary="به‌روزرسانی کاور مقاله با عکس موقتی",
+     *     tags={"عکس‌ها"},
+     *     @OA\Parameter(
+     *         name="articleId",
+     *         in="path",
+     *         required=true,
+     *         description="شناسه مقاله",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             @OA\Property(
+     *                 property="temporary_image_id",
+     *                 type="integer",
+     *                 description="شناسه عکس موقت",
+     *                 example=1
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="کاور مقاله با موفقیت به‌روزرسانی شد.",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="کاور مقاله با موفقیت به‌روزرسانی شد."),
+     *             @OA\Property(property="image_id", type="integer", example=1),
+     *             @OA\Property(property="image_path", type="string", example="images/cover.jpg")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="شما مجاز به ویرایش این مقاله نیستید."
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="عکس موقتی یافت نشد."
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="خطا در به‌روزرسانی کاور"
+     *     )
+     * )
+     */
     public function updateCover(Request $request, $articleId)
     {
         // اعتبارسنجی ورودی
