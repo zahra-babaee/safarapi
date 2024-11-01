@@ -5,8 +5,11 @@ namespace App\Http\Controllers\v1;
 use App\Dto\BaseDto;
 use App\Dto\BaseDtoStatusEnum;
 use App\Http\Controllers\Controller;
+use App\Models\Image;
 use App\Models\Message;
+use App\Models\TemporaryImage;
 use App\Models\Ticket;
+use App\Models\TicketAttachment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Mews\Purifier\Facades\Purifier;
@@ -14,6 +17,65 @@ use App\Events\TicketEvent;
 
 class TicketController extends Controller
 {
+    public function store(Request $request)
+    {
+        // اعتبارسنجی ورودی‌ها
+        $validator = Validator::make($request->all(), [
+            'title' => 'required|string|max:255',
+            'priority' => 'required|in:low,medium,high',
+            'description' => 'required|string',
+            'attachments.*' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048' // محدودیت‌های فایل برای چند فایل
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(new BaseDto(BaseDtoStatusEnum::ERROR, data: $validator->errors()), 422);
+        }
+
+        // ایجاد تیکت جدید
+        $ticket = Ticket::query()->create([
+            'title' => $request->title,
+            'priority' => $request->priority,
+            'description' => $request->description,
+            'creator_id' => auth()->id(),
+            'status' => 'open',
+        ]);
+
+        // ذخیره description تیکت به عنوان اولین پیام در جدول messages
+        Message::query()->create([
+            'ticket_id' => $ticket->id,
+            'creator_id' => auth()->id(),
+            'message' => $request->description,
+            'is_read' => false,
+        ]);
+
+        // بررسی تعداد پیوست‌ها قبل از ذخیره
+        $attachmentCount = TicketAttachment::query()->where('ticket_id', $ticket->id)->count();
+        if ($attachmentCount + count($request->file('attachments', [])) > 5) {
+            return response()->json(new BaseDto(BaseDtoStatusEnum::ERROR, data: ['attachments' => 'حداکثر ۵ پیوست مجاز است.']), 422);
+        }
+
+        // ذخیره‌سازی فایل‌ها در جدول ticket_attachments
+        $attachmentUrls = []; // آرایه‌ای برای ذخیره URL های پیوست‌ها
+
+        if ($request->hasFile('attachments')) {
+            foreach ($request->file('attachments') as $file) {
+                // انتقال فایل به جدول ticket_attachments
+                $attachment = TicketAttachment::query()->create([
+                    'path' => $file->store('attachments'),
+                    'ticket_id' => $ticket->id
+                ]);
+
+                // ذخیره URL کامل
+                $attachmentUrls[] = url($attachment->path);
+            }
+        }
+
+        // به‌روزرسانی تیکت با URL پیوست‌ها (در صورت وجود)
+        $ticket->attachment_urls = $attachmentUrls; // ذخیره URLs به صورت آرایه
+        $ticket->save();
+
+        return response()->json(new BaseDto(BaseDtoStatusEnum::OK, data: $ticket), 201);
+    }
     /**
      * @OA\Post(
      *     path="/api/v1/tickets",
@@ -56,38 +118,178 @@ class TicketController extends Controller
      *     security={{"bearerAuth": {}}}
      * )
      */
-    public function store(Request $request)
+    /**
+     * @OA\Get(
+     *     path="/api/v1/ticket/{id}",
+     *     summary="نمایش تیکت خاص",
+     *     description="دریافت اطلاعات یک تیکت و پیام‌های مرتبط با آن",
+     *     tags={"Tickets"},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         description="شناسه تیکت مورد نظر",
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Parameter(
+     *         name="Authorization",
+     *         in="header",
+     *         required=true,
+     *         description="توکن احراز هویت JWT",
+     *         @OA\Schema(type="string", example="Bearer {your_token}")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="اطلاعات تیکت و پیام‌ها با موفقیت بازگردانده شد",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="status", type="string", example="OK"),
+     *             @OA\Property(property="message", type="string", example="تیکت با موفقیت پیدا شد."),
+     *             @OA\Property(property="data", type="object",
+     *                 @OA\Property(property="ticket_id", type="integer", example=1),
+     *                 @OA\Property(property="title", type="string", example="مشکل در ورود به حساب"),
+     *                 @OA\Property(property="priority", type="string", example="high"),
+     *                 @OA\Property(property="status", type="string", example="open"),
+     *                 @OA\Property(property="creator_id", type="integer", example=2),
+     *                 @OA\Property(property="created_at", type="string", format="date-time", example="2024-10-25 14:30"),
+     *                 @OA\Property(
+     *                     property="messages",
+     *                     type="array",
+     *                     @OA\Items(
+     *                         type="object",
+     *                         @OA\Property(property="message_id", type="integer", example=10),
+     *                         @OA\Property(property="creator_id", type="integer", example=2),
+     *                         @OA\Property(property="message", type="string", example="پیام کاربر یا ادمین"),
+     *                         @OA\Property(property="is_read", type="boolean", example=false),
+     *                         @OA\Property(property="created_at", type="string", format="date-time", example="2024-10-25 15:30")
+     *                     )
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="کاربر مجاز به مشاهده این تیکت نیست",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="ERROR"),
+     *             @OA\Property(property="message", type="string", example="شما دسترسی به این تیکت را ندارید.")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="تیکت مورد نظر یافت نشد",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="ERROR"),
+     *             @OA\Property(property="message", type="string", example="تیکت مورد نظر یافت نشد.")
+     *         )
+     *     )
+     * )
+     */
+    public function ticket($id)
     {
-        $validator = Validator::make($request->all(), [
-            'title' => 'required|string|max:255',
-            'priority' => 'required|in:low,medium,high',
-            'description' => 'required|string',
-        ]);
+        $ticket = Ticket::with('messages')->find($id); // دریافت تیکت همراه با پیام‌ها
 
-        if ($validator->fails()) {
-            return response()->json(new BaseDto(BaseDtoStatusEnum::ERROR, data: $validator->errors()), 422);
+        if (!$ticket) {
+            return response()->json(new BaseDto(
+                BaseDtoStatusEnum::ERROR,
+                'تیکت مورد نظر یافت نشد.'
+            ), 404);
         }
 
-        // ایجاد تیکت جدید
-        $ticket = Ticket::query()->create([
-            'title' => $request->title,
-            'priority' => $request->priority,
-            'description' => $request->description,
-            'creator_id' => auth()->id(),
-            'status' => 'open',
-        ]);
+        $user = auth()->user();
 
-        // ذخیره description تیکت به عنوان اولین پیام در جدول messages
-        Message::query()->create([
+        // بررسی دسترسی کاربر به تیکت
+        if ($user->id !== $ticket->creator_id) {
+            return response()->json(new BaseDto(
+                BaseDtoStatusEnum::ERROR,
+                'شما دسترسی به این تیکت را ندارید.'
+            ), 403);
+        }
+        // ساختار پاسخ
+        $responseData = [
             'ticket_id' => $ticket->id,
-            'creator_id' => auth()->id(),
-            'message' => $request->description,
-            'is_read' => false,
-        ]);
+            'title' => $ticket->title,
+            'priority' => $ticket->priority,
+            'status' => $ticket->status,
+            'creator_id' => $ticket->creator_id,
+            'created_at' => $ticket->created_at->format('Y-m-d H:i'),
+            'messages' => $ticket->messages->map(function ($message) {
+                return [
+                    'message_id' => $message->id,
+                    'creator_id' => $message->creator_id,
+                    'message' => $message->message,
+                    'is_read' => $message->is_read,
+                    'created_at' => $message->created_at->format('Y-m-d H:i'),
+                ];
+            }),
+        ];
 
-        return response()->json(new BaseDto(BaseDtoStatusEnum::OK, data: $ticket), 201);
+        return response()->json(new BaseDto(
+            BaseDtoStatusEnum::OK,
+            'تیکت با موفقیت پیدا شد.',
+            $responseData
+        ), 200);
     }
 
+    /**
+     * @OA\Patch(
+     *     path="/tickets/{id}/close",
+     *     summary="بستن تیکت",
+     *     description="این متد وضعیت تیکت را به «بسته شده» تغییر می‌دهد.",
+     *     operationId="markAsClose",
+     *     tags={"Tickets"},
+     *     security={{"bearerAuth":{}}},
+     *
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         description="شناسه تیکت",
+     *         required=true,
+     *         @OA\Schema(type="integer")
+     *     ),
+     *
+     *     @OA\Response(
+     *         response=200,
+     *         description="وضعیت تیکت به «بسته شده» تغییر کرد",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="success"),
+     *             @OA\Property(property="message", type="string", example="وضعیت تیکت به «بسته شده» تغییر کرد")
+     *         )
+     *     ),
+     *
+     *     @OA\Response(
+     *         response=404,
+     *         description="تیکت پیدا نشد",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="error"),
+     *             @OA\Property(property="message", type="string", example="تیکت مورد نظر یافت نشد")
+     *         )
+     *     ),
+     *
+     *     @OA\Response(
+     *         response=401,
+     *         description="عدم دسترسی",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="error"),
+     *             @OA\Property(property="message", type="string", example="دسترسی غیرمجاز")
+     *         )
+     *     )
+     * )
+     */
+    public function markAsClose($id, Request $request)
+    {
+        // جستجو و دریافت تیکت با id مشخص و متعلق به کاربر فعلی
+        $ticket = Ticket::query()
+            ->where('creator_id', $request->user()->id)
+            ->where('id', $id)
+            ->firstOrFail();
+
+        // تغییر وضعیت تیکت به «بسته شده»
+        $ticket->status = 'closed';
+        $ticket->save();
+
+        return response()->json(new BaseDto(BaseDtoStatusEnum::OK, 'وضعیت تیکت به «بسته شده» تغییر کرد'), 200);
+    }
     /**
      * @OA\Get(
      *     path="/api/v1/tickets",
@@ -127,7 +329,7 @@ class TicketController extends Controller
             ->get()
             ->map(function ($ticket) {
                 return [
-                    'id' => $ticket->id,
+                    'ticket_id' => $ticket->id,
                     'title' => $ticket->title,
                     'priority' => $ticket->priority,
                     'description' => $ticket->description,
@@ -224,9 +426,12 @@ class TicketController extends Controller
         $response = [
             'message' => $message,
             'user_role' => $user->role,
-            'user_name' => $user->name,
             'created_at' => $message->created_at->format('Y-m-d H:i'),
             'ticket_id' => $ticketId,
+            'author' => [
+                'name' => $message->user ? $message->user->name : null,
+                'avatar' => $message->user && $message->user->avatar ? asset($message->user->avatar) : null
+            ],
         ];
 
         return response()->json(new BaseDto(BaseDtoStatusEnum::OK, data: $response), 201);
@@ -292,13 +497,17 @@ class TicketController extends Controller
             ->get()
             ->map(function ($message) {
                 return [
-                    'id' => $message->id,
+                    'message_id' => $message->id,
                     'ticket_id' => $message->ticket_id,
                     'creator_id' => $message->creator_id,
                     'creator_role' => $message->creator->role ?? null,
                     'message' => $message->message,
                     'is_read' => $message->is_read,
                     'created_at' => $message->created_at->format('Y-m-d H:i'),
+                    'author' => [
+                        'name' => $message->user ? $message->user->name : null,
+                        'avatar' => $message->user && $message->user->avatar ? asset($message->user->avatar) : null
+                    ],
                 ];
             });
 

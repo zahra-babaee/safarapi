@@ -7,6 +7,7 @@ use App\Dto\BaseDtoStatusEnum;
 use App\Models\Otp;
 use App\Models\Image;
 use App\Models\User;
+use App\Notifications\ProfileStatusUpdated;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Storage;
@@ -22,7 +23,7 @@ class ProfileController extends Controller
      * @OA\Get(
      *     path="/v1/profile",
      *     summary="نمایش پروفایل کاربر",
-     *     description="این متد اطلاعات پروفایل کاربر شامل نام، شماره تلفن و عکس پروفایل را نمایش می‌دهد. اگر کاربر عکس پروفایل نداشته باشد، عکس پیش‌فرض نمایش داده می‌شود.",
+     *     description="این متد اطلاعات پروفایل کاربر شامل نام، شماره تلفن و عکس پروفایل را نمایش می‌دهد. اگر کاربر عکس پروفایل نداشته باشد، آواتار پیش‌فرض از جدول تصاویر بازیابی و نمایش داده می‌شود.",
      *     tags={"پروفایل"},
      *     security={{"bearerAuth":{}}},
      *     @OA\Response(
@@ -30,13 +31,13 @@ class ProfileController extends Controller
      *         description="اطلاعات پروفایل با موفقیت بازیابی شد.",
      *         @OA\JsonContent(
      *             @OA\Property(property="status", type="string", example="OK"),
-     *             @OA\Property(property="message", type="string", example=""),
+     *             @OA\Property(property="message", type="string", example="پروفایل کاربر بازیابی شد."),
      *             @OA\Property(
      *                 property="data",
      *                 type="object",
      *                 @OA\Property(property="name", type="string", example="علی احمدی"),
      *                 @OA\Property(property="phone", type="string", example="09123456789"),
-     *                 @OA\Property(property="avatar", type="string", example="https://your-domain.com/storage/avatars/default.png")
+     *                 @OA\Property(property="avatar", type="string", nullable=true, example="https://your-domain.com/images/default.png")
      *             )
      *         )
      *     ),
@@ -54,26 +55,29 @@ class ProfileController extends Controller
     {
         $user = auth()->user();
 
-        // اگر کاربر عکس پروفایل ندارد
+        // اگر کاربر عکس پروفایل ندارد از آواتار پیش‌فرض استفاده می‌کنیم
         if (!$user->has_avatar) {
-            $defaultAvatar = Image::query()->where('type', 'avatar')->first();
-            $avatarUrl = $defaultAvatar ? Storage::url($defaultAvatar->path) : null;
+            $defaultAvatar = Image::query()->where('type', 'default_avatar')->first();
+            $avatarUrl = $defaultAvatar ? asset('images/' . $defaultAvatar->path) : null;
         } else {
-            $avatar = $user->avatar;
-            $avatarUrl = $avatar ? Storage::url($avatar->path) : null;
+            $avatar = Image::query()->find($user->image_id);
+            $avatarUrl = $avatar ? asset('images/' . $avatar->path) : null;
         }
 
-        return response()->json(new BaseDto(BaseDtoStatusEnum::OK, data:[
-            'name' => $user->name,
-            'phone' => $user->phone,
-            'avatar' => $avatarUrl,
-        ]));
+        return response()->json(new BaseDto(
+            BaseDtoStatusEnum::OK,
+            data: [
+                'name' => $user->name,
+                'phone' => $user->phone,
+                'avatar' => $avatarUrl,
+            ]
+        ));
     }
     /**
      * @OA\Post(
      *     path="/v1/profile/avatar",
      *     summary="به‌روزرسانی عکس پروفایل کاربر",
-     *     description="این متد برای به‌روزرسانی عکس پروفایل کاربر استفاده می‌شود. عکس جدید باید یک فایل تصویر معتبر باشد و حجم آن نباید از 2 مگابایت بیشتر باشد. در صورت وجود عکس قبلی، آن حذف شده و عکس جدید جایگزین می‌شود.",
+     *     description="این متد برای به‌روزرسانی عکس پروفایل کاربر استفاده می‌شود. عکس جدید باید یک فایل تصویر معتبر باشد و حجم آن نباید از 2 مگابایت بیشتر باشد. در صورت وجود عکس قبلی، آن حذف شده و عکس جدید جایگزین می‌شود. تصویر پروفایل در پوشه `images/profile_photos` ذخیره می‌شود.",
      *     tags={"پروفایل"},
      *     security={{"bearerAuth":{}}},
      *     @OA\RequestBody(
@@ -96,7 +100,7 @@ class ProfileController extends Controller
      *                 property="data",
      *                 type="object",
      *                 @OA\Property(property="image", type="string", example="unique_image_name.jpg"),
-     *                 @OA\Property(property="url", type="string", example="https://your-domain.com/storage/profile_photos/unique_image_name.jpg")
+     *                 @OA\Property(property="url", type="string", example="https://your-domain.com/images/profile_photos/unique_image_name.jpg")
      *             )
      *         )
      *     ),
@@ -114,8 +118,7 @@ class ProfileController extends Controller
      *         description="خطایی در بارگذاری تصویر رخ داد.",
      *         @OA\JsonContent(
      *             @OA\Property(property="status", type="string", example="ERROR"),
-     *             @OA\Property(property="message", type="string", example="خطا در بارگذاری تصویر."),
-     *             @OA\Property(property="data", type="object")
+     *             @OA\Property(property="message", type="string", example="خطا در بارگذاری تصویر.")
      *         )
      *     )
      * )
@@ -143,7 +146,7 @@ class ProfileController extends Controller
         try {
             $user = auth()->user();
 
-            // حذف تصویر قبلی
+            // حذف تصویر قبلی در صورت وجود
             if ($user->image_id) {
                 $oldImage = Image::query()->find($user->image_id);
                 if ($oldImage) {
@@ -153,33 +156,43 @@ class ProfileController extends Controller
             }
 
             // ذخیره تصویر جدید
-            $filename = uniqid() . '.' . $request->file('image')->getClientOriginalExtension();
-            $path = $request->file('image')->storeAs('profile_photos', $filename, 'public');
+            $profileImage = $request->file('image');
+            $imageName = time() . '.' . $profileImage->extension();
+            $profileImage->move(public_path('images/profile_photos'), $imageName);
 
+            $path = 'images/profile_photos/' . $imageName;
+
+            // ذخیره رکورد تصویر جدید در دیتابیس
             $newImage = Image::query()->create([
                 'type' => 'avatar',
                 'path' => $path,
             ]);
 
-            // به‌روزرسانی کلید خارجی در جدول users
+            // به‌روزرسانی کلید خارجی در جدول کاربران
             $user->image_id = $newImage->id;
             $user->has_avatar = true;
             $user->save();
 
-            return response()->json(new BaseDto(BaseDtoStatusEnum::OK, 'عکس با موفقیت بزوررسانی شد',
+            return response()->json(new BaseDto(
+                BaseDtoStatusEnum::OK,
+                'عکس با موفقیت به‌روزرسانی شد',
                 data: [
-                    'image' => $filename,
-                    'url' => Storage::url($path),
-                ]), 200);
+                    'image' => $imageName,
+                    'url' => asset($path),
+                ]
+            ), 200);
 
         } catch (\Exception $e) {
             Log::error("Error updating avatar: " . $e->getMessage());
 
-            return response()->json(new BaseDto(BaseDtoStatusEnum::ERROR,  'خطا در بارگذاری تصویر.',
-                data:[
-                'error' => $e->getMessage(),
-                'status' => 'error',
-            ]), 500);
+            return response()->json(new BaseDto(
+                BaseDtoStatusEnum::ERROR,
+                'خطا در بارگذاری تصویر.',
+                data: [
+                    'error' => $e->getMessage(),
+                    'status' => 'error',
+                ]
+            ), 500);
         }
     }
     /**
@@ -194,7 +207,7 @@ class ProfileController extends Controller
      *         @OA\JsonContent(
      *             @OA\Property(property="name", type="string", description="نام کاربر", example="علی رضایی"),
      *             @OA\Property(property="phone", type="string", description="شماره تلفن جدید", example="09123456789"),
-     *             @OA\Property(property="profile_picture", type="string", format="binary", description="تصویر پروفایل جدید")
+     *             @OA\Property(property="image", type="string", format="binary", description="تصویر پروفایل جدید")
      *         )
      *     ),
      *     @OA\Response(
@@ -211,11 +224,19 @@ class ProfileController extends Controller
      *         )
      *     ),
      *     @OA\Response(
+     *         response=202,
+     *         description="کد یکبار مصرف به شماره جدید ارسال شد.",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="OK"),
+     *             @OA\Property(property="message", type="string", example="کد یکبار مصرف به شماره جدید ارسال شد.")
+     *         )
+     *     ),
+     *     @OA\Response(
      *         response=400,
-     *         description="خطاهای اعتبارسنجی رخ داده است.",
+     *         description="خطاهای اعتبارسنجی رخ داده است یا شماره تلفن قبلاً استفاده شده است.",
      *         @OA\JsonContent(
      *             @OA\Property(property="status", type="string", example="ERROR"),
-     *             @OA\Property(property="message", type="string", example="خطاهای اعتبارسنجی رخ داده است."),
+     *             @OA\Property(property="message", type="string", example="خطاهای اعتبارسنجی رخ داده است یا این شماره تلفن قبلاً توسط کاربر دیگری استفاده شده است."),
      *             @OA\Property(property="data", type="object")
      *         )
      *     ),
@@ -233,37 +254,38 @@ class ProfileController extends Controller
     {
         $user = auth()->user();
 
+        // اعتبارسنجی ورودی‌ها
         $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
+            'name' => 'sometimes|string|max:255',
             'phone' => 'sometimes|regex:/^09[0-9]{9}$/|digits:11',
-            'profile_picture' => 'sometimes|image|max:2048'
+            'image' => 'sometimes|image|max:2048',
         ], [
-            'name.required' => 'نام نباید خالی باشد.',
             'name.string' => 'نام باید معتبر باشد.',
             'name.max' => 'نام نباید بیشتر از 255 کاراکتر باشد.',
             'phone.regex' => 'شماره تلفن باید با 09 شروع شود و 11 رقم باشد.',
             'phone.digits' => 'شماره تلفن باید دقیقاً 11 رقم باشد.',
-            'profile_picture.image' => 'فایل باید یک تصویر معتبر باشد.',
-            'profile_picture.max' => 'حجم تصویر نباید بیشتر از 2 مگابایت باشد.'
+            'image.image' => 'فایل باید یک تصویر معتبر باشد.',
+            'image.max' => 'حجم تصویر نباید بیشتر از 2 مگابایت باشد.',
         ]);
 
         if ($validator->fails()) {
-            $errors = $validator->errors()->toArray();
-
             return response()->json(new BaseDto(
                 BaseDtoStatusEnum::ERROR,
                 'خطاهای اعتبارسنجی رخ داده است.',
-                $errors
+                $validator->errors()->toArray()
             ), 400);
         }
 
-        // به‌روزرسانی نام کاربر
+        // به‌روزرسانی نام کاربر در صورت ارسال
         if ($request->filled('name')) {
             $user->name = $request->name;
         }
 
-        // به‌روزرسانی تصویر پروفایل
-        if ($request->hasFile('profile_picture')) {
+        // به‌روزرسانی تصویر پروفایل در صورت ارسال
+        if ($request->hasFile('image')) {
+            $profile_image = $request->file('image');
+            $imageName = time() . '.' . $profile_image->extension();
+
             // حذف تصویر قدیمی
             if ($user->image_id) {
                 $oldImage = Image::query()->find($user->image_id);
@@ -273,19 +295,33 @@ class ProfileController extends Controller
                 }
             }
 
-            // ذخیره تصویر جدید
-            $path = $request->file('profile_picture')->store('profile_pictures', 'public');
+            // ذخیره تصویر جدید به مسیر public/images
+            $profile_image->move(public_path('images'), $imageName);
+            $path = 'images/' . $imageName;
+
             $newImage = Image::query()->create([
                 'type' => 'avatar',
                 'path' => $path,
+                'user_id' => $user->id,
             ]);
+
+            $user->avatar = $path;
             $user->image_id = $newImage->id;
             $user->has_avatar = true;
         }
 
-        // مدیریت تغییر شماره تلفن
+        // به‌روزرسانی شماره تلفن در صورت ارسال
         if ($request->filled('phone') && $request->phone !== $user->phone) {
-            // ارسال کد OTP به شماره جدید
+            // بررسی اینکه شماره وارد شده قبلاً توسط کاربر دیگری استفاده شده است
+            $existingUser = User::query()->where('phone', $request->phone)->first();
+            if ($existingUser) {
+                return response()->json(new BaseDto(
+                    BaseDtoStatusEnum::ERROR,
+                    'این شماره تلفن قبلاً توسط کاربر دیگری استفاده شده است.'
+                ), 400);
+            }
+
+            // تولید و ذخیره OTP
             $otp = rand(1000, 9999);
             Otp::query()->create([
                 'phone' => $request->phone,
@@ -294,25 +330,24 @@ class ProfileController extends Controller
             ]);
             $this->sendOtp($request->phone, $otp);
 
-            return response()->json(new BaseDto(BaseDtoStatusEnum::OK, 'کد یکبار مصرف به شماره جدید ارسال شد. ابتدا شماره را تایید کنید.',
-                data:
-                [
-                'requires_verification' => true,
-                ]),200);
+            return response()->json(new BaseDto(
+                BaseDtoStatusEnum::OK,
+                'کد یکبار مصرف به شماره جدید ارسال شد..',
+            ), 202);
         }
 
         // ذخیره تغییرات کاربر
         $user->save();
 
-        return response()->json(new BaseDto(BaseDtoStatusEnum::OK, 'اطلاعات پروفایل با موفقیت به‌روزرسانی شد.',
-           data:
-            [
-            'user' => $user,
-            ]),200);
+        return response()->json(new BaseDto(
+            BaseDtoStatusEnum::OK,
+            'اطلاعات پروفایل با موفقیت به‌روزرسانی شد.',
+            ['user' => $user]
+        ), 200);
     }
     /**
      * @OA\Post(
-     *     path="/v1/profile/verify-phone-otp",
+     *     path="/v1/profile/verify-update",
      *     summary="تأیید شماره تلفن با کد OTP",
      *     description="این متد برای تأیید شماره تلفن کاربر با استفاده از کد یکبار مصرف (OTP) است. در صورت موفقیت، یک توکن JWT برای کاربر تولید می‌شود.",
      *     tags={"پروفایل"},
@@ -334,7 +369,11 @@ class ProfileController extends Controller
      *                 property="data",
      *                 type="object",
      *                 @OA\Property(property="token", type="string", description="توکن JWT کاربر"),
-     *                 @OA\Property(property="user Data", type="object", description="اطلاعات کاربر")
+     *                 @OA\Property(
+     *                     property="user_data",
+     *                     type="object",
+     *                     description="اطلاعات کاربر شامل شناسه و شماره تلفن"
+     *                 )
      *             )
      *         )
      *     ),
@@ -345,6 +384,14 @@ class ProfileController extends Controller
      *             @OA\Property(property="status", type="string", example="ERROR"),
      *             @OA\Property(property="message", type="string", example="خطاهای اعتبارسنجی رخ داده است."),
      *             @OA\Property(property="data", type="object")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="احراز هویت نامعتبر است.",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="ERROR"),
+     *             @OA\Property(property="message", type="string", example="احراز هویت کاربر نامعتبر است.")
      *         )
      *     ),
      *     @OA\Response(
@@ -457,7 +504,11 @@ class ProfileController extends Controller
      *         @OA\JsonContent(
      *             @OA\Property(property="status", type="string", example="ERROR"),
      *             @OA\Property(property="message", type="string", example="خطاهای اعتبارسنجی رخ داده است."),
-     *             @OA\Property(property="data", type="object")
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 additionalProperties=@OA\Property(type="array", @OA\Items(type="string"))
+     *             )
      *         )
      *     ),
      *     @OA\Response(
@@ -475,8 +526,14 @@ class ProfileController extends Controller
         // اعتبارسنجی ورودی برای تنظیم رمز عبور
         $validator = Validator::make($request->all(), [
             'password' => [
-                'required','min:8','confirmed','regex:/[a-z]/','regex:/[A-Z]/','regex:/[0-9]/','regex:/[@$!%*#?&]/'
-                ],
+                'required',
+                'min:8',
+                'confirmed',
+                'regex:/[a-z]/',
+                'regex:/[A-Z]/',
+                'regex:/[0-9]/',
+                'regex:/[@$!%*#?&]/'
+            ],
             'old_password' => 'required_if:has_password,true',
         ], [
             'password.required' => 'رمز عبور نباید خالی باشد.',
@@ -494,27 +551,27 @@ class ProfileController extends Controller
             ), 400);
         }
 
-$user = auth()->user();
+        $user = auth()->user();
 
         // چک کردن رمز عبور فعلی
         if ($user->has_password && !Hash::check($request->old_password, $user->password)) {
-            return response()->json(new BaseDto(BaseDtoStatusEnum::ERROR,'رمز عبور فعلی نادرست است.'),
-                400);
+            return response()->json(new BaseDto(BaseDtoStatusEnum::ERROR, 'رمز عبور فعلی نادرست است.'),
+                401); // تغییر کد وضعیت به 401
         }
 
         // تنظیم رمز عبور جدید
         $user->password = Hash::make($request->password);
-        $user->has_password = true;
+        $user->has_password = true; // در صورتی که رمز عبور قبلاً نداشته باشد، این مقدار به true تغییر می‌کند
         $user->save();
 
-        return response()->json(new BaseDto(BaseDtoStatusEnum::OK,'رمز عبور با موفقیت ایجاد شد.'),
+        return response()->json(new BaseDto(BaseDtoStatusEnum::OK, 'رمز عبور با موفقیت ایجاد شد.'),
             200);
     }
     /**
      * @OA\Delete(
      *     path="/v1/profile/delete-avatar",
      *     summary="حذف عکس پروفایل",
-     *     description="این متد برای حذف عکس پروفایل کاربر استفاده می‌شود و در صورت حذف موفق، عکس پیش‌فرض جایگزین می‌شود.",
+     *     description="این متد برای حذف عکس پروفایل کاربر استفاده می‌شود. در صورت حذف موفق، عکس پیش‌فرض جایگزین می‌شود.",
      *     tags={"پروفایل"},
      *     security={{"bearerAuth":{}}},
      *     @OA\Response(
@@ -522,7 +579,7 @@ $user = auth()->user();
      *         description="عکس پروفایل با موفقیت حذف شد.",
      *         @OA\JsonContent(
      *             @OA\Property(property="status", type="string", example="OK"),
-     *             @OA\Property(property="message", type="string", example="عکس پروفایل حذف شد و عکس پیشفرض جایگزین شد.")
+     *             @OA\Property(property="message", type="string", example="عکس پروفایل حذف شد و عکس پیش‌فرض جایگزین شد.")
      *         )
      *     ),
      *     @OA\Response(
@@ -563,15 +620,15 @@ $user = auth()->user();
                 $image->delete();
             }
 
-            // ریست کردن فیلد profile_image_id در جدول کاربران
+            // ریست کردن فیلد image_id در جدول کاربران
             $user->image_id = null; // یا مقداری که نشان‌دهنده عکس پیش‌فرض است
             $user->save();
 
-            return response()->json(new BaseDto(BaseDtoStatusEnum::OK, 'عکس پروفایل حذف شد و عکس پیشفرض جایگزین شد.'),
+            return response()->json(new BaseDto(BaseDtoStatusEnum::OK, 'عکس پروفایل حذف شد و عکس پیش‌فرض جایگزین شد.'),
                 200);
         }
 
-        return response()->json(new BaseDto(BaseDtoStatusEnum::ERROR,'عکس پروفایل پیدا نشد.'),
+        return response()->json(new BaseDto(BaseDtoStatusEnum::ERROR, 'عکس پروفایل پیدا نشد.'),
             404);
     }
     private function sendOtp($phone, $otp)

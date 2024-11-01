@@ -9,8 +9,8 @@ use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvi
 class EventServiceProvider extends ServiceProvider
 {
     protected $listen = [
-        NotificationEvent::class => [
-            SendNotificationListener::class,
+        \App\Events\UserRegistered::class => [
+            \App\Listeners\SendInitialNotifications::class,
         ],
     ];
 }

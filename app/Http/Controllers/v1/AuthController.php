@@ -4,6 +4,7 @@ namespace App\Http\Controllers\v1;
 
 use App\Dto\BaseDto;
 use App\Dto\BaseDtoStatusEnum;
+use App\Events\UserRegistered;
 use App\Models\Image;
 use App\Models\Notification;
 use Illuminate\Routing\Controller;
@@ -292,6 +293,8 @@ class AuthController extends Controller
                 return response()->json(new BaseDto(BaseDtoStatusEnum::ERROR,
                     'مشکلی در ایجاد توکن به وجود آمده است.', ),500);
             }
+
+            event(new UserRegistered($user));
 
             // پاسخ با توکن JWT
             return response()->json(new BaseDto(BaseDtoStatusEnum::OK,

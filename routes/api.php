@@ -41,6 +41,8 @@ Route::group([
 
     Route::post('/tickets', [TicketController::class, 'store'])->middleware('auth:api');
     Route::get('/tickets', [TicketController::class, 'index'])->middleware('auth:api');
+    Route::get('/ticket/{id}', [TicketController::class, 'ticket'])->middleware('auth:api');
+    Route::get('/ticket/{id}/close', [TicketController::class, 'markAsClose'])->middleware('auth:api');
     Route::post('/tickets/{ticketId}/messages', [TicketController::class, 'storeMessage'])->middleware('auth:api');
     Route::get('/tickets/{ticketId}/messages', [TicketController::class, 'getMessages'])->middleware('auth:api');
 });

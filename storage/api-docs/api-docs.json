@@ -1651,7 +1651,7 @@
                     "پروفایل"
                 ],
                 "summary": "نمایش پروفایل کاربر",
-                "description": "این متد اطلاعات پروفایل کاربر شامل نام، شماره تلفن و عکس پروفایل را نمایش می‌دهد. اگر کاربر عکس پروفایل نداشته باشد، عکس پیش‌فرض نمایش داده می‌شود.",
+                "description": "این متد اطلاعات پروفایل کاربر شامل نام، شماره تلفن و عکس پروفایل را نمایش می‌دهد. اگر کاربر عکس پروفایل نداشته باشد، آواتار پیش‌فرض از جدول تصاویر بازیابی و نمایش داده می‌شود.",
                 "operationId": "438398992ddfe037e9c830a99542ba9b",
                 "responses": {
                     "200": {
@@ -1666,7 +1666,7 @@
                                         },
                                         "message": {
                                             "type": "string",
-                                            "example": ""
+                                            "example": "پروفایل کاربر بازیابی شد."
                                         },
                                         "data": {
                                             "properties": {
@@ -1680,7 +1680,8 @@
                                                 },
                                                 "avatar": {
                                                     "type": "string",
-                                                    "example": "https://your-domain.com/storage/avatars/default.png"
+                                                    "example": "https://your-domain.com/images/default.png",
+                                                    "nullable": true
                                                 }
                                             },
                                             "type": "object"
@@ -1725,7 +1726,7 @@
                     "پروفایل"
                 ],
                 "summary": "به‌روزرسانی عکس پروفایل کاربر",
-                "description": "این متد برای به‌روزرسانی عکس پروفایل کاربر استفاده می‌شود. عکس جدید باید یک فایل تصویر معتبر باشد و حجم آن نباید از 2 مگابایت بیشتر باشد. در صورت وجود عکس قبلی، آن حذف شده و عکس جدید جایگزین می‌شود.",
+                "description": "این متد برای به‌روزرسانی عکس پروفایل کاربر استفاده می‌شود. عکس جدید باید یک فایل تصویر معتبر باشد و حجم آن نباید از 2 مگابایت بیشتر باشد. در صورت وجود عکس قبلی، آن حذف شده و عکس جدید جایگزین می‌شود. تصویر پروفایل در پوشه `images/profile_photos` ذخیره می‌شود.",
                 "operationId": "5bad382ccca77a45d545a2e144de0865",
                 "requestBody": {
                     "required": true,
@@ -1770,7 +1771,7 @@
                                                 },
                                                 "url": {
                                                     "type": "string",
-                                                    "example": "https://your-domain.com/storage/profile_photos/unique_image_name.jpg"
+                                                    "example": "https://your-domain.com/images/profile_photos/unique_image_name.jpg"
                                                 }
                                             },
                                             "type": "object"
@@ -1817,9 +1818,6 @@
                                         "message": {
                                             "type": "string",
                                             "example": "خطا در بارگذاری تصویر."
-                                        },
-                                        "data": {
-                                            "type": "object"
                                         }
                                     },
                                     "type": "object"
@@ -1859,7 +1857,7 @@
                                         "type": "string",
                                         "example": "09123456789"
                                     },
-                                    "profile_picture": {
+                                    "image": {
                                         "description": "تصویر پروفایل جدید",
                                         "type": "string",
                                         "format": "binary"
@@ -1900,8 +1898,28 @@
                             }
                         }
                     },
+                    "202": {
+                        "description": "کد یکبار مصرف به شماره جدید ارسال شد.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "OK"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "کد یکبار مصرف به شماره جدید ارسال شد."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
                     "400": {
-                        "description": "خطاهای اعتبارسنجی رخ داده است.",
+                        "description": "خطاهای اعتبارسنجی رخ داده است یا شماره تلفن قبلاً استفاده شده است.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -1912,7 +1930,7 @@
                                         },
                                         "message": {
                                             "type": "string",
-                                            "example": "خطاهای اعتبارسنجی رخ داده است."
+                                            "example": "خطاهای اعتبارسنجی رخ داده است یا این شماره تلفن قبلاً توسط کاربر دیگری استفاده شده است."
                                         },
                                         "data": {
                                             "type": "object"
@@ -1951,14 +1969,14 @@
                 ]
             }
         },
-        "/v1/profile/verify-phone-otp": {
+        "/v1/profile/verify-update": {
             "post": {
                 "tags": [
                     "پروفایل"
                 ],
                 "summary": "تأیید شماره تلفن با کد OTP",
                 "description": "این متد برای تأیید شماره تلفن کاربر با استفاده از کد یکبار مصرف (OTP) است. در صورت موفقیت، یک توکن JWT برای کاربر تولید می‌شود.",
-                "operationId": "e89509e8b5deba8f52ac78db5ac105f7",
+                "operationId": "208edb4090e18f30604be2e465a9c8f2",
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -2002,8 +2020,8 @@
                                                     "description": "توکن JWT کاربر",
                                                     "type": "string"
                                                 },
-                                                "user Data": {
-                                                    "description": "اطلاعات کاربر",
+                                                "user_data": {
+                                                    "description": "اطلاعات کاربر شامل شناسه و شماره تلفن",
                                                     "type": "object"
                                                 }
                                             },
@@ -2031,6 +2049,26 @@
                                         },
                                         "data": {
                                             "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "احراز هویت نامعتبر است.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "ERROR"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "احراز هویت کاربر نامعتبر است."
                                         }
                                     },
                                     "type": "object"
@@ -2157,7 +2195,14 @@
                                             "example": "خطاهای اعتبارسنجی رخ داده است."
                                         },
                                         "data": {
-                                            "type": "object"
+                                            "type": "object",
+                                            "additionalProperties": {
+                                                "type": "array",
+                                                "items": {
+                                                    "type": "string"
+                                                },
+                                                "property": null
+                                            }
                                         }
                                     },
                                     "type": "object"
@@ -2199,7 +2244,7 @@
                     "پروفایل"
                 ],
                 "summary": "حذف عکس پروفایل",
-                "description": "این متد برای حذف عکس پروفایل کاربر استفاده می‌شود و در صورت حذف موفق، عکس پیش‌فرض جایگزین می‌شود.",
+                "description": "این متد برای حذف عکس پروفایل کاربر استفاده می‌شود. در صورت حذف موفق، عکس پیش‌فرض جایگزین می‌شود.",
                 "operationId": "ef7060dcd7a5566a36ff0e2fd467e865",
                 "responses": {
                     "200": {
@@ -2214,7 +2259,7 @@
                                         },
                                         "message": {
                                             "type": "string",
-                                            "example": "عکس پروفایل حذف شد و عکس پیشفرض جایگزین شد."
+                                            "example": "عکس پروفایل حذف شد و عکس پیش‌فرض جایگزین شد."
                                         }
                                     },
                                     "type": "object"
@@ -2255,6 +2300,246 @@
                                         "message": {
                                             "type": "string",
                                             "example": "خطا در حذف عکس پروفایل."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/ticket/{id}": {
+            "get": {
+                "tags": [
+                    "Tickets"
+                ],
+                "summary": "نمایش تیکت خاص",
+                "description": "دریافت اطلاعات یک تیکت و پیام‌های مرتبط با آن",
+                "operationId": "d282d288209a69efe0ce6a93dde6b90e",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "شناسه تیکت مورد نظر",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "Authorization",
+                        "in": "header",
+                        "description": "توکن احراز هویت JWT",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "Bearer {your_token}"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "اطلاعات تیکت و پیام‌ها با موفقیت بازگردانده شد",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "OK"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "تیکت با موفقیت پیدا شد."
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "ticket_id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "title": {
+                                                    "type": "string",
+                                                    "example": "مشکل در ورود به حساب"
+                                                },
+                                                "priority": {
+                                                    "type": "string",
+                                                    "example": "high"
+                                                },
+                                                "status": {
+                                                    "type": "string",
+                                                    "example": "open"
+                                                },
+                                                "creator_id": {
+                                                    "type": "integer",
+                                                    "example": 2
+                                                },
+                                                "created_at": {
+                                                    "type": "string",
+                                                    "format": "date-time",
+                                                    "example": "2024-10-25 14:30"
+                                                },
+                                                "messages": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "properties": {
+                                                            "message_id": {
+                                                                "type": "integer",
+                                                                "example": 10
+                                                            },
+                                                            "creator_id": {
+                                                                "type": "integer",
+                                                                "example": 2
+                                                            },
+                                                            "message": {
+                                                                "type": "string",
+                                                                "example": "پیام کاربر یا ادمین"
+                                                            },
+                                                            "is_read": {
+                                                                "type": "boolean",
+                                                                "example": false
+                                                            },
+                                                            "created_at": {
+                                                                "type": "string",
+                                                                "format": "date-time",
+                                                                "example": "2024-10-25 15:30"
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "کاربر مجاز به مشاهده این تیکت نیست",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "ERROR"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "شما دسترسی به این تیکت را ندارید."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "تیکت مورد نظر یافت نشد",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "ERROR"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "تیکت مورد نظر یافت نشد."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tickets/{id}/close": {
+            "patch": {
+                "tags": [
+                    "Tickets"
+                ],
+                "summary": "بستن تیکت",
+                "description": "این متد وضعیت تیکت را به «بسته شده» تغییر می‌دهد.",
+                "operationId": "markAsClose",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "شناسه تیکت",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "وضعیت تیکت به «بسته شده» تغییر کرد",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "وضعیت تیکت به «بسته شده» تغییر کرد"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "تیکت پیدا نشد",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "error"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "تیکت مورد نظر یافت نشد"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "عدم دسترسی",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "error"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "دسترسی غیرمجاز"
                                         }
                                     },
                                     "type": "object"
@@ -2316,123 +2601,6 @@
                                                 },
                                                 "type": "object"
                                             }
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            },
-            "post": {
-                "tags": [
-                    "Tickets"
-                ],
-                "summary": "ایجاد تیکت جدید",
-                "description": "این متد یک تیکت جدید ایجاد می‌کند.",
-                "operationId": "276e90e0ac7a0c95dc1111a965afb492",
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "required": [
-                                    "title",
-                                    "priority",
-                                    "description"
-                                ],
-                                "properties": {
-                                    "title": {
-                                        "type": "string",
-                                        "example": "مشکل در ورود به سایت"
-                                    },
-                                    "priority": {
-                                        "type": "string",
-                                        "enum": [
-                                            "low",
-                                            "medium",
-                                            "high"
-                                        ],
-                                        "example": "high"
-                                    },
-                                    "description": {
-                                        "type": "string",
-                                        "example": "نمیتوانم وارد سایت شوم."
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "201": {
-                        "description": "تیکت با موفقیت ایجاد شد",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "ok"
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "تیکت با موفقیت ایجاد شد."
-                                        },
-                                        "data": {
-                                            "properties": {
-                                                "id": {
-                                                    "type": "integer",
-                                                    "example": 1
-                                                },
-                                                "title": {
-                                                    "type": "string",
-                                                    "example": "مشکل در ورود به سایت"
-                                                },
-                                                "priority": {
-                                                    "type": "string",
-                                                    "example": "high"
-                                                },
-                                                "status": {
-                                                    "type": "string",
-                                                    "example": "open"
-                                                },
-                                                "created_at": {
-                                                    "type": "string",
-                                                    "format": "date-time"
-                                                }
-                                            },
-                                            "type": "object"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "خطاهای اعتبارسنجی",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "error"
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "خطاهای اعتبارسنجی رخ داده است."
-                                        },
-                                        "data": {
-                                            "type": "object"
                                         }
                                     },
                                     "type": "object"
