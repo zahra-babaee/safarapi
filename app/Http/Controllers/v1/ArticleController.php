@@ -372,8 +372,10 @@ class ArticleController extends Controller
             'created_at' => $articles->created_at->format('Y-m-d H:i'), // تاریخ ایجاد
             'author' => [
                     'name' => $articles->user ? $articles->user->name : null,
-                    'avatar' => $articles->user && $articles->user->avatar ? asset($articles->user->avatar) : null
-                ]
+//                'avatar' => $articles->user && $articles->user->image ? asset($articles->user->image->path) : null
+                'avatar' => $articles->user && $articles->user->image ? asset($articles->user->image->path) : null
+
+            ]
         ];
 
         return response()->json(new BaseDto(
@@ -452,7 +454,9 @@ class ArticleController extends Controller
             'created_at' => $article->created_at->format('Y-m-d H:i'), // تاریخ ایجاد
             'author' => [
                 'name' => $article->user ? $article->user->name : null,
-                'avatar' => $article->user && $article->user->avatar ? asset($article->user->avatar) : null
+//                'avatar' => $article->user && $article->user->avatar ? asset($article->user->avatar) : null
+                'avatar' => $article->user && $article->user->image ? asset($article->user->image->path) : null
+
             ]
         ];
 
@@ -601,6 +605,12 @@ class ArticleController extends Controller
                 'category_id' => $article->category_id,
                 'category_name' => $article->category ? $this->translateAttractionType($article->category->attraction_type) : null,
                 'created_at' => $article->created_at->format('Y-m-d H:i'), // تاریخ ایجاد
+                'author' => [
+                    'name' => $article->user ? $article->user->name : null,
+//                'avatar' => $article->user && $article->user->avatar ? asset($article->user->avatar) : null
+                    'avatar' => $article->user && $article->user->image ? asset($article->user->image->path) : null
+
+                ]
             ];
         });
 
@@ -660,6 +670,12 @@ class ArticleController extends Controller
                 'category_id' => $article->category_id,
                 'category_name' => $article->category ? $this->translateAttractionType($article->category->attraction_type) : null,
                 'created_at' => $article->created_at->format('Y-m-d H:i'), // تاریخ ایجاد
+                'author' => [
+                    'name' => $article->user ? $article->user->name : null,
+//                'avatar' => $article->user && $article->user->avatar ? asset($article->user->avatar) : null
+                    'avatar' => $article->user && $article->user->image ? asset($article->user->image->path) : null
+
+                ]
             ];
         });
 
@@ -718,6 +734,12 @@ class ArticleController extends Controller
                 'category_id' => $article->category_id,
                 'category_name' => $article->category ? $this->translateAttractionType($article->category->attraction_type) : null,
                 'created_at' => $article->created_at->format('Y-m-d H:i'),
+                'author' => [
+                    'name' => $article->user ? $article->user->name : null,
+//                'avatar' => $article->user && $article->user->avatar ? asset($article->user->avatar) : null
+                    'avatar' => $article->user && $article->user->image ? asset($article->user->image->path) : null
+
+                ]
             ];
         });
 

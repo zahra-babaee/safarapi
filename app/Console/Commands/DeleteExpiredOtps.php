@@ -15,6 +15,6 @@ class DeleteExpiredOtps extends Command
     {
         $deletedCount = Otp::query()->where('expires_at', '<', Carbon::now())->delete();
 
-        $this->info("تعداد {$deletedCount} کد منقضی شده حذف شد.");
+        $this->info("{$deletedCount} expired OTP codes were deleted.");
     }
 }

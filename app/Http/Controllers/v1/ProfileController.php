@@ -169,17 +169,17 @@ class ProfileController extends Controller
                 ), 429); // کد وضعیت 429 برای Too Many Requests
             }
         }
-
+        $type = 'old';
         // تولید و ذخیره OTP
         $otp = rand(1000, 9999);
         Otp::query()->create([
             'phone' => $request->phone,
             'otp' => $otp,
-            'type' => 'old',
+            'type' => $type,
         ]);
 
         // ارسال OTP به کاربر
-        $this->sendOtp($request->phone, $otp);
+        $this->sendOtp($request->phone, $otp, $type);
 
         // پیامی برای ارسال OTP جدید
         $message = $lastOtp ? 'کد جدید ارسال شد.' : 'کد ارسال شد.';
@@ -354,17 +354,17 @@ class ProfileController extends Controller
                     ), 429); // کد وضعیت 429 برای Too Many Requests
                 }
             }
-
+            $type = 'update';
             // تولید و ذخیره OTP
             $otp = rand(1000, 9999);
             Otp::query()->create([
                 'phone' => $request->phone,
                 'otp' => $otp,
-                'type' => 'update',
+                'type' => $type,
             ]);
 
             // ارسال OTP به کاربر
-            $this->sendOtp($request->phone, $otp);
+            $this->sendOtp($request->phone, $otp, $type);
 
             // پیامی برای ارسال OTP جدید
             $message = $lastOtp ? 'کد جدید ارسال شد.' : 'کد ارسال شد.';
@@ -522,8 +522,8 @@ class ProfileController extends Controller
 
         // بررسی رمز فعلی
         if (!Hash::check($request->current_password, $user->password)) {
-            \Log::info('Entered password: ' . $request->current_password);
-            \Log::info('Stored password: ' . $user->password);
+//            \Log::info('Entered password: ' . $request->current_password);
+//            \Log::info('Stored password: ' . $user->password);
             return response()->json(new BaseDto(
                 BaseDtoStatusEnum::ERROR,
                 'رمز فعلی نادرست است.'
@@ -537,33 +537,32 @@ class ProfileController extends Controller
 
         $passwordLength = strlen($request->new_password);
 
-        // خارج کردن کاربر از سیستم (در صورت تمایل)
+        // خارج کردن کاربر از سیست
         // Auth::logout();
 
         return response()->json(new BaseDto(
             BaseDtoStatusEnum::OK,
             'رمز عبور با موفقیت به‌روزرسانی شد.',
             data: [
-                'password_length' => $passwordLength // اضافه کردن طول رمز عبور به پاسخ
+                'password_length' => $passwordLength // طول رمز عبور
             ]
         ), 200);
     }
     public function index()
     {
         $user = auth()->user();
-
-        // بررسی اینکه آیا کاربر عکس پروفایل دارد
         $avatarUrl = null; // مقداردهی اولیه به URL عکس پروفایل
 
         if ($user->has_avatar) {
             $avatar = Image::query()->find($user->image_id);
-            $avatarUrl = $avatar ? asset('images/' . $avatar->path) : null;
+            $avatarUrl = $avatar ? asset($avatar->path) : null;
+//            $avatarUrl = $avatar ? asset($user->image->path) : null;
+
         }
 
-        // بررسی اینکه کاربر رمز عبور دارد یا نه
         $hasPassword = !is_null($user->password);
 
-        // طول رمز عبور از مقدار ذخیره‌شده در دیتابیس
+        // یافتن طول رمز عبور از مقدار ذخیره‌شده در دیتابیس
         $passwordLength = $user->password_length ?? 0;
 
         return response()->json(new BaseDto(
@@ -571,9 +570,9 @@ class ProfileController extends Controller
             data: [
                 'name' => $user->name,
                 'phone' => $user->phone,
-                'avatar' => $avatarUrl, // فقط در صورت وجود عکس، URL آن ارسال می‌شود
-                'has_password' => $hasPassword, // آیا کاربر رمز عبور دارد یا نه
-                'password_length' => $passwordLength, // طول رمز عبور
+                'avatar' => $avatarUrl,
+                'has_password' => $hasPassword,
+                'password_length' => $passwordLength,
             ]
         ));
     }
@@ -652,7 +651,6 @@ class ProfileController extends Controller
 
     public function setPassword(Request $request)
     {
-        // اعتبارسنجی ورودی برای تنظیم رمز عبور
         $validator = Validator::make($request->all(), [
             'password' => [
                 'required',
@@ -690,7 +688,7 @@ class ProfileController extends Controller
 
         // تنظیم رمز عبور جدید
         $user->password = Hash::make($request->password);
-        $user->has_password = true; // در صورتی که رمز عبور قبلاً نداشته باشد، این مقدار به true تغییر می‌کند
+        $user->has_password = true;
         $user->save();
 
         // محاسبه طول و تعداد کاراکترهای رمز عبور
@@ -706,7 +704,6 @@ class ProfileController extends Controller
     }
     public function deleteAvatar(Request $request)
     {
-        // دریافت کاربر جاری
         $user = $request->user();
 
         // پیدا کردن عکس پروفایل فعلی
@@ -714,9 +711,8 @@ class ProfileController extends Controller
             // پیدا کردن عکس از طریق ID
             $image = Image::query()->find($user->image_id);
 
-            // حذف عکس از سیستم ذخیره‌سازی
+            // حذف عکس
             if ($image) {
-                // حذف عکس از سیستم ذخیره‌سازی
                 if (Storage::exists($image->path)) {
                     Storage::delete($image->path);
                 }
@@ -737,22 +733,40 @@ class ProfileController extends Controller
         return response()->json(new BaseDto(BaseDtoStatusEnum::ERROR, 'عکس پروفایل پیدا نشد.'),
             404);
     }
-    private function sendOtp($phone, $otp)
+    private function sendOtp($phone, $otp, $type)
     {
+        switch ($type) {
+            case 'update':
+                $message = urlencode("کد تأیید بروزرسانی اطلاعات شما: $otp");
+                break;
+            case 'old':
+                $message = urlencode("کد تأیید مورد استفاده قبلی شما: $otp");
+                break;
+            default:
+                $message = urlencode("کد تأیید شما: $otp");
+                break;
+        }
         // ارسال OTP به شماره تلفن
         $curl = curl_init();
-        $apikey = ''; // کلید API شما
-        $message = urlencode("کد یکبار مصرف برای ورود شما: $otp");
-        $sender = ''; // شماره فرستنده شما
+        $apikey = '493036347A343565484D3767455769504867546F636A7A30664D6C36316F724E38654E2B42324A2F4166633D';
+//        $message = urlencode("Your verification is: $otp");
+//        $phone = $request->phone;
+        $sender = '100090003';
         $url = "https://api.kavenegar.com/v1/$apikey/sms/send.json?receptor=$phone&sender=$sender&message=$message";
 
-        curl_setopt_array($curl, [
+        curl_setopt_array($curl, array(
             CURLOPT_URL => $url,
             CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => '',
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 0,
             CURLOPT_FOLLOWLOCATION => true,
             CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
             CURLOPT_CUSTOMREQUEST => 'POST',
-        ]);
+            CURLOPT_HTTPHEADER => array(
+                'Cookie: cookiesession1=678A8C40E277BD0A60A9819053EC3D82'
+            ),
+        ));
 
         $response = curl_exec($curl);
         $httpcode = curl_getinfo($curl, CURLINFO_HTTP_CODE);

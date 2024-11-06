@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Mews\Purifier\Facades\Purifier;
 use App\Events\TicketEvent;
+use function Symfony\Component\Translation\t;
 
 class TicketController extends Controller
 {
@@ -46,7 +47,7 @@ class TicketController extends Controller
         $attachmentUrls = [];
         if ($request->has('attachments')) {
             foreach ($request->file('attachments') as $file) {
-                $imageName = time() . '.' . $file->extension();
+                $imageName = uniqid(time() . '_') . '.' . $file->extension();  // ایجاد یک شناسه منحصر به فرد
                 $tempPath = 'attachments/' . $imageName;
 
                 // انتقال فایل به مسیر موقت
@@ -69,6 +70,10 @@ class TicketController extends Controller
             'creator_id' => auth()->id(),
             'message' => $request->description,
             'is_read' => false,
+            'author' => [
+                'name' => $ticket->user ? $ticket->user->name : null,  // نام کاربر
+                'avatar' => $ticket->user && $ticket->user->image ? asset($ticket->user->image->path) : null  // عکس پروفایل کاربر
+            ]
         ]);
 
         // بازگرداندن تیکت به همراه لینک‌های ضمیمه در پاسخ نهایی
@@ -233,10 +238,14 @@ class TicketController extends Controller
             'messages' => $ticket->messages->map(function ($message) {
                 return [
                     'message_id' => $message->id,
-                    'creator_id' => $message->creator_id,
                     'message' => $message->message,
                     'is_read' => $message->is_read,
                     'created_at' => $message->created_at->format('Y-m-d H:i'),
+                    'author' => json_encode([
+                        'name' => $message->user ? $message->user->name : null,  // نام کاربر
+                        'avatar' => $message->user && $message->user->image ? asset($message->user->image->path) : null  // عکس پروفایل کاربر
+                    ])
+
                 ];
             }),
         ];
@@ -525,7 +534,7 @@ class TicketController extends Controller
                     'created_at' => $message->created_at->format('Y-m-d H:i'),
                     'author' => [
                         'name' => $message->user ? $message->user->name : null,
-                        'avatar' => $message->user && $message->user->avatar ? asset($message->user->avatar) : null
+                        'avatar' => $message->user && $message->user->image ? asset($message->user->image->path) : null
                     ]
                 ];
             });

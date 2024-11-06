@@ -24,10 +24,11 @@ class User extends Authenticatable implements JWTSubject
         'token',
         'deleted_at',
     ];
-    public function profileImage()
+    public function image()
     {
-        return $this->belongsTo(Image::class, 'profile_image_id');
+        return $this->belongsTo(Image::class); // فرض بر این است که هر کاربر فقط یک تصویر دارد
     }
+
     public function getProfilePhoto()
     {
         $image = $this->avatar;

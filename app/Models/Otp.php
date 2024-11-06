@@ -11,19 +11,23 @@ class Otp extends Model
 
     protected $fillable = [
         'phone',
-        'otp'
+        'otp',
+        'type',
+        'expires_at'
     ];
-
-    public static function remainingTime($phone, $type)
+    public function generateMessage()
     {
-        $otp = self::query()->where('phone', $phone)->where('type', $type)->orderBy('created_at', 'desc')->first();
-
-        if ($otp) {
-            $createdAt = $otp->created_at;
-            $expirationTime = $createdAt->addMinutes(2); // فرض بر این است که OTP برای 2 دقیقه معتبر است
-            return $expirationTime->diffInSeconds(now());
+        switch ($this->type) {
+            case 'register':
+                return "کد تأیید ثبت‌نام شما: {$this->otp}";
+            case 'forget':
+                return "کد بازیابی رمز عبور شما: {$this->otp}";
+            case 'update':
+                return "کد تأیید بروزرسانی اطلاعات شما: {$this->otp}";
+            case 'old':
+                return "کد تأیید مورد استفاده قبلی شما: {$this->otp}";
+            default:
+                return "کد OTP شما: {$this->otp}";
         }
-
-        return 0; // اگر OTP وجود نداشته باشد
     }
 }

@@ -31,5 +31,9 @@ class Message extends Model
     {
         return $this->belongsTo(User::class, 'creator_id');
     }
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'creator_id');  // creator_id به user مربوط است
+    }
 
 }

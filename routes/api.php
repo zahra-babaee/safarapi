@@ -67,16 +67,13 @@ Route::group([
     Route::post('reset-password', [AuthController::class, 'resetPassword']);
     Route::post('login_password', [AuthController::class, 'loginWithPass']);
 
+//    Route::group(['prefix' => 'v1'], function ($router) {
+//        Route::post('messages',[ChatController::class,'message']);
 
-
-    Route::group(['prefix' => 'v1'], function ($router) {
-        Route::post('messages',[ChatController::class,'message']);
-
-        Route::delete('notifications-old', [NotificationController::class, 'deleteOldNotifications']);
-        Route::post('notifications-send', [NotificationController::class, 'sendNotification']);
-    });
-    Broadcast::routes(['middleware' => ['auth:api']]);
-
+//        Route::delete('notifications-old', [NotificationController::class, 'deleteOldNotifications']);
+//        Route::post('notifications-send', [NotificationController::class, 'sendNotification']);
+//    });
+//    Broadcast::routes(['middleware' => ['auth:api']]);
 
     Route::get('test', function (){
        return response()->json(new \App\Dto\BaseDto(\App\Dto\BaseDtoStatusEnum::ERROR,"خطا"))->setStatusCode(200);

@@ -17,6 +17,7 @@ use Tymon\JWTAuth\Exceptions\JWTException;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Illuminate\Support\Facades\Hash;
 use App\Events\NotificationEvent;
+use function Symfony\Component\Translation\t;
 
 class AuthController extends Controller
 {
@@ -81,7 +82,6 @@ class AuthController extends Controller
      */
     public function register(Request $request)
     {
-        // اعتبارسنجی شماره تلفن
         $validator = Validator::make($request->all(), [
             'phone' => 'required|regex:/^09[0-9]{9}$/|digits:11',
         ], [
@@ -123,18 +123,18 @@ class AuthController extends Controller
                 );
             }
         }
-
+        $type = 'register';
         $otp = rand(1000, 9999);
         Otp::query()->create([
             'phone' => $request->phone,
             'otp' => $otp,
-            'type' => 'register',
-            'expires_at' => Carbon::now()->addMinutes(3), // زمان انقضای ۳ دقیقه بعد از حالا
+            'type' => $type,
+            'expires_at' => Carbon::now()->addMinutes(3),
         ]);
 
 
         // ارسال OTP به کاربر
-        $this->sendOtp($request->phone, $otp);
+        $this->sendOtp($request->phone, $otp, $type);
 
         // پیامی برای ارسال OTP جدید
         $message = $lastOtp ? 'کد جدید ارسال شد.' : 'کد ارسال شد.';
@@ -541,7 +541,7 @@ class AuthController extends Controller
             ), 400);
         }
 
-        $otpValidityDuration = 120; // اعتبار OTP به ثانیه
+        $otpValidityDuration = 120;
         $user = User::query()->where('phone', $request->phone)->first();
 
         // بررسی وجود کاربر
@@ -551,7 +551,7 @@ class AuthController extends Controller
 
         $lastOtp = Otp::query()
             ->where('phone', $request->phone)
-//            ->where('type', 'forget')
+            ->where('type', 'forget')
             ->orderBy('created_at', 'desc')
             ->first();
 
@@ -571,17 +571,18 @@ class AuthController extends Controller
                 ), 429);
             }
         }
+        $type = 'forget';
 
         // ایجاد کد OTP جدید و ذخیره آن
         $otp = rand(1000, 9999);
         Otp::query()->create([
             'phone' => $request->phone,
             'otp' => $otp,
-//            'type' => 'forget',
+            'type' => $type,
         ]);
 
         // ارسال OTP به کاربر
-        $this->sendOtp($request->phone, $otp);
+        $this->sendOtp($request->phone, $otp ,$type);
 
         // پیامی برای ارسال OTP جدید
         $message = $lastOtp ? 'کد جدید ارسال شد.' : 'کد ارسال شد.';
@@ -807,13 +808,23 @@ class AuthController extends Controller
 
         return response()->json(new BaseDto(BaseDtoStatusEnum::OK, 'رمز عبور با موفقیت بازنشانی شد.'), 200);
     }
-    private function sendOtp($phone, $otp)
-    {
+//    private function sendOtp($phone, $otp)
+        private function sendOtp($phone, $otp, $type)
+        {
+            switch ($type) {
+                case 'register':
+                    $message = urlencode("کد فعال‌سازی ثبت‌نام شما: $otp");
+                    break;
+                case 'forget':
+                    $message = urlencode("کد بازیابی رمز عبور شما: $otp");
+                    break;
+                default:
+                    $message = urlencode("کد تأیید شما: $otp");
+                    break;
+            }
         // ارسال OTP به شماره تلفن
         $curl = curl_init();
         $apikey = '493036347A343565484D3767455769504867546F636A7A30664D6C36316F724E38654E2B42324A2F4166633D';
-        $message = urlencode("Your verification is: $otp");
-//        $phone = $request->phone;
         $sender = '100090003';
         $url = "https://api.kavenegar.com/v1/$apikey/sms/send.json?receptor=$phone&sender=$sender&message=$message";
 
