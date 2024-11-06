@@ -6,6 +6,7 @@ use App\Dto\BaseDto;
 use App\Dto\BaseDtoStatusEnum;
 use App\Events\UserRegistered;
 use App\Models\Image;
+use Carbon\Carbon;
 use App\Models\Notification;
 use Illuminate\Routing\Controller;
 use App\Models\Otp;
@@ -19,10 +20,6 @@ use App\Events\NotificationEvent;
 
 class AuthController extends Controller
 {
-    public function index()
-    {
-        //
-    }
     /**
      * @OA\Post(
      *     path="/v1/api/register",
@@ -99,7 +96,7 @@ class AuthController extends Controller
             return response()->json(new BaseDto(
                 BaseDtoStatusEnum::ERROR,
                 'خطاهای اعتبارسنجی رخ داده است.',
-                $errors
+                data : $errors
             ), 400);
         }
 
@@ -132,7 +129,9 @@ class AuthController extends Controller
             'phone' => $request->phone,
             'otp' => $otp,
             'type' => 'register',
+            'expires_at' => Carbon::now()->addMinutes(3), // زمان انقضای ۳ دقیقه بعد از حالا
         ]);
+
 
         // ارسال OTP به کاربر
         $this->sendOtp($request->phone, $otp);
@@ -261,6 +260,7 @@ class AuthController extends Controller
             ->where('phone', $request->phone)
             ->where('otp', $request->otp)
             ->where('created_at', '>=', now()->subMinutes(2))
+            ->where('expires_at', '>', Carbon::now())
             ->first();
 
         if ($otpRecord) {
@@ -551,7 +551,7 @@ class AuthController extends Controller
 
         $lastOtp = Otp::query()
             ->where('phone', $request->phone)
-            ->where('type', 'forget')
+//            ->where('type', 'forget')
             ->orderBy('created_at', 'desc')
             ->first();
 
@@ -577,7 +577,7 @@ class AuthController extends Controller
         Otp::query()->create([
             'phone' => $request->phone,
             'otp' => $otp,
-            'type' => 'forget',
+//            'type' => 'forget',
         ]);
 
         // ارسال OTP به کاربر
@@ -654,7 +654,7 @@ class AuthController extends Controller
      *     )
      * )
      */
-    public function verifyOtpForReset(Request $request)
+    public function verifyOtpForget(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'phone' => 'required|regex:/^09[0-9]{9}$/|digits:11',
@@ -680,7 +680,7 @@ class AuthController extends Controller
         $otpRecord = Otp::query()
             ->where('phone', $request->phone)
             ->where('otp', $request->otp)
-            ->where('type', 'forget')
+//            ->where('type', 'forget')
             ->where('created_at', '>=', now()->subMinutes(2)) // بررسی زمان معتبر بودن کد
             ->first();
 

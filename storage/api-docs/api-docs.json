@@ -75,7 +75,7 @@
                     "مقالات"
                 ],
                 "summary": "به‌روزرسانی مقاله",
-                "operationId": "e48654ef704f390c5a78e33441cda6f5",
+                "operationId": "9e3d40e727daf7f173010abeb2a6729c",
                 "parameters": [
                     {
                         "name": "articleId",
@@ -1645,17 +1645,117 @@
                 }
             }
         },
-        "/v1/profile": {
-            "get": {
+        "/api/v1/update-name": {
+            "post": {
                 "tags": [
                     "پروفایل"
                 ],
-                "summary": "نمایش پروفایل کاربر",
-                "description": "این متد اطلاعات پروفایل کاربر شامل نام، شماره تلفن و عکس پروفایل را نمایش می‌دهد. اگر کاربر عکس پروفایل نداشته باشد، آواتار پیش‌فرض از جدول تصاویر بازیابی و نمایش داده می‌شود.",
-                "operationId": "438398992ddfe037e9c830a99542ba9b",
+                "summary": "بروزرسانی نام کاربر",
+                "description": "این api نام کاربر را بروزرسانی میکند",
+                "operationId": "816807db8111bce1505ee95cf1013ad7",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "description": "New name for the user",
+                                        "type": "string",
+                                        "example": "John Doe"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
                 "responses": {
                     "200": {
-                        "description": "اطلاعات پروفایل با موفقیت بازیابی شد.",
+                        "description": "Name updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Name updated successfully."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "The given data was invalid."
+                                        },
+                                        "errors": {
+                                            "properties": {
+                                                "name": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string",
+                                                        "example": "The name field is required."
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/old/phone": {
+            "post": {
+                "tags": [
+                    "Phone Verification"
+                ],
+                "summary": "ارسال کد OTP به شماره تلفن قدیمی",
+                "operationId": "22b974b9f58f063700b99dd3f0d5b3c1",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "phone"
+                                ],
+                                "properties": {
+                                    "phone": {
+                                        "description": "شماره تلفن کاربر که باید با 09 شروع شود و 11 رقم باشد",
+                                        "type": "string",
+                                        "example": "09123456789"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "کد OTP ارسال شد",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -1666,22 +1766,17 @@
                                         },
                                         "message": {
                                             "type": "string",
-                                            "example": "پروفایل کاربر بازیابی شد."
+                                            "example": "کد ارسال شد."
                                         },
                                         "data": {
                                             "properties": {
-                                                "name": {
-                                                    "type": "string",
-                                                    "example": "علی احمدی"
-                                                },
                                                 "phone": {
                                                     "type": "string",
                                                     "example": "09123456789"
                                                 },
-                                                "avatar": {
-                                                    "type": "string",
-                                                    "example": "https://your-domain.com/images/default.png",
-                                                    "nullable": true
+                                                "otp_ttl": {
+                                                    "type": "integer",
+                                                    "example": 120
                                                 }
                                             },
                                             "type": "object"
@@ -1692,8 +1787,8 @@
                             }
                         }
                     },
-                    "401": {
-                        "description": "احراز هویت ناموفق بود.",
+                    "400": {
+                        "description": "خطاهای اعتبارسنجی شماره تلفن",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -1704,7 +1799,39 @@
                                         },
                                         "message": {
                                             "type": "string",
-                                            "example": "توکن نامعتبر است."
+                                            "example": "خطاهای اعتبارسنجی شماره تلفن رخ داده است."
+                                        },
+                                        "errors": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "درخواست بیش از حد",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "ERROR"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "تا {remainingSeconds} ثانیه دیگر نمی‌توانید درخواست جدید بدهید."
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "otp_ttl": {
+                                                    "type": "integer",
+                                                    "example": 60
+                                                }
+                                            },
+                                            "type": "object"
                                         }
                                     },
                                     "type": "object"
@@ -1712,276 +1839,25 @@
                             }
                         }
                     }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
+                }
             }
         },
-        "/v1/profile/avatar": {
+        "/api/v1/old/phone/verify": {
             "post": {
                 "tags": [
-                    "پروفایل"
+                    "Phone Verification"
                 ],
-                "summary": "به‌روزرسانی عکس پروفایل کاربر",
-                "description": "این متد برای به‌روزرسانی عکس پروفایل کاربر استفاده می‌شود. عکس جدید باید یک فایل تصویر معتبر باشد و حجم آن نباید از 2 مگابایت بیشتر باشد. در صورت وجود عکس قبلی، آن حذف شده و عکس جدید جایگزین می‌شود. تصویر پروفایل در پوشه `images/profile_photos` ذخیره می‌شود.",
-                "operationId": "5bad382ccca77a45d545a2e144de0865",
+                "summary": "تأیید شماره تلفن قدیمی با استفاده از OTP",
+                "operationId": "18a06705cc273238696b6568ca193ed8",
                 "requestBody": {
                     "required": true,
                     "content": {
-                        "multipart/form-data": {
+                        "application/json": {
                             "schema": {
                                 "required": [
-                                    "image"
+                                    "phone",
+                                    "otp"
                                 ],
-                                "properties": {
-                                    "image": {
-                                        "description": "فایل تصویر پروفایل",
-                                        "type": "string",
-                                        "format": "binary"
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "عکس پروفایل با موفقیت به‌روزرسانی شد.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "OK"
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "عکس با موفقیت به‌روزرسانی شد"
-                                        },
-                                        "data": {
-                                            "properties": {
-                                                "image": {
-                                                    "type": "string",
-                                                    "example": "unique_image_name.jpg"
-                                                },
-                                                "url": {
-                                                    "type": "string",
-                                                    "example": "https://your-domain.com/images/profile_photos/unique_image_name.jpg"
-                                                }
-                                            },
-                                            "type": "object"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "خطاهای اعتبارسنجی تصویر رخ داده است.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "ERROR"
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "خطاهای اعتبارسنجی تصویر رخ داده است."
-                                        },
-                                        "data": {
-                                            "type": "object"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "خطایی در بارگذاری تصویر رخ داد.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "ERROR"
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "خطا در بارگذاری تصویر."
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            }
-        },
-        "/v1/profile/update": {
-            "post": {
-                "tags": [
-                    "پروفایل"
-                ],
-                "summary": "به‌روزرسانی پروفایل کاربر",
-                "description": "این متد برای به‌روزرسانی اطلاعات پروفایل کاربر از جمله نام، تصویر پروفایل و شماره تلفن استفاده می‌شود. در صورت تغییر شماره تلفن، کد یکبار مصرف برای تایید ارسال خواهد شد.",
-                "operationId": "73d5e8c6be23b0052df31480a69bc66a",
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "properties": {
-                                    "name": {
-                                        "description": "نام کاربر",
-                                        "type": "string",
-                                        "example": "علی رضایی"
-                                    },
-                                    "phone": {
-                                        "description": "شماره تلفن جدید",
-                                        "type": "string",
-                                        "example": "09123456789"
-                                    },
-                                    "image": {
-                                        "description": "تصویر پروفایل جدید",
-                                        "type": "string",
-                                        "format": "binary"
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "پروفایل با موفقیت به‌روزرسانی شد.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "OK"
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "اطلاعات پروفایل با موفقیت به‌روزرسانی شد."
-                                        },
-                                        "data": {
-                                            "properties": {
-                                                "user": {
-                                                    "description": "اطلاعات کاربر",
-                                                    "type": "object"
-                                                }
-                                            },
-                                            "type": "object"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "202": {
-                        "description": "کد یکبار مصرف به شماره جدید ارسال شد.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "OK"
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "کد یکبار مصرف به شماره جدید ارسال شد."
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "خطاهای اعتبارسنجی رخ داده است یا شماره تلفن قبلاً استفاده شده است.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "ERROR"
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "خطاهای اعتبارسنجی رخ داده است یا این شماره تلفن قبلاً توسط کاربر دیگری استفاده شده است."
-                                        },
-                                        "data": {
-                                            "type": "object"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "خطا در به‌روزرسانی اطلاعات پروفایل.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "ERROR"
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "خطایی در به‌روزرسانی اطلاعات رخ داده است."
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            }
-        },
-        "/v1/profile/verify-update": {
-            "post": {
-                "tags": [
-                    "پروفایل"
-                ],
-                "summary": "تأیید شماره تلفن با کد OTP",
-                "description": "این متد برای تأیید شماره تلفن کاربر با استفاده از کد یکبار مصرف (OTP) است. در صورت موفقیت، یک توکن JWT برای کاربر تولید می‌شود.",
-                "operationId": "208edb4090e18f30604be2e465a9c8f2",
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
                                 "properties": {
                                     "phone": {
                                         "description": "شماره تلفن کاربر",
@@ -1989,7 +1865,7 @@
                                         "example": "09123456789"
                                     },
                                     "otp": {
-                                        "description": "کد یکبار مصرف",
+                                        "description": "کد OTP دریافت شده",
                                         "type": "string",
                                         "example": "1234"
                                     }
@@ -2001,7 +1877,200 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "شماره تلفن با موفقیت بروزرسانی شد.",
+                        "description": "کد تایید شد",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "OK"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "کد تایید شد."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "کد OTP نامعتبر یا منقضی شده است",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "ERROR"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "کد OTP نامعتبر است یا منقضی شده است."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/update/phone": {
+            "post": {
+                "tags": [
+                    "Phone Update"
+                ],
+                "summary": "درخواست تغییر شماره تلفن",
+                "operationId": "59a0b671d7627ca56234f30d5a65efe6",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "phone"
+                                ],
+                                "properties": {
+                                    "phone": {
+                                        "description": "شماره جدید کاربر",
+                                        "type": "string",
+                                        "example": "09123456789"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "کد OTP به شماره جدید ارسال شد",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "OK"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "کد جدید ارسال شد."
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "phone": {
+                                                    "type": "string",
+                                                    "example": "09123456789"
+                                                },
+                                                "otp_ttl": {
+                                                    "type": "integer",
+                                                    "example": 120
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "خطاهای اعتبارسنجی شماره تلفن",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "ERROR"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "خطاهای اعتبارسنجی شماره تلفن رخ داده است."
+                                        },
+                                        "errors": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "درخواست بیش از حد",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "ERROR"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "تا {remainingSeconds} ثانیه دیگر نمی‌توانید درخواست جدید بدهید."
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "otp_ttl": {
+                                                    "type": "integer",
+                                                    "example": 60
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/update/phone/verify": {
+            "post": {
+                "tags": [
+                    "Phone Update"
+                ],
+                "summary": "تأیید شماره تلفن جدید با استفاده از OTP",
+                "operationId": "19e3df715fa7d5ab0ddb582623380063",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "phone",
+                                    "otp"
+                                ],
+                                "properties": {
+                                    "phone": {
+                                        "description": "شماره جدید کاربر",
+                                        "type": "string",
+                                        "example": "09123456789"
+                                    },
+                                    "otp": {
+                                        "description": "کد OTP دریافت شده",
+                                        "type": "string",
+                                        "example": "1234"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "شماره تلفن با موفقیت بروزرسانی شد",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -2017,11 +2086,10 @@
                                         "data": {
                                             "properties": {
                                                 "token": {
-                                                    "description": "توکن JWT کاربر",
-                                                    "type": "string"
+                                                    "type": "string",
+                                                    "example": "JWT_TOKEN"
                                                 },
                                                 "user_data": {
-                                                    "description": "اطلاعات کاربر شامل شناسه و شماره تلفن",
                                                     "type": "object"
                                                 }
                                             },
@@ -2033,51 +2101,8 @@
                             }
                         }
                     },
-                    "400": {
-                        "description": "خطاهای اعتبارسنجی رخ داده است.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "ERROR"
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "خطاهای اعتبارسنجی رخ داده است."
-                                        },
-                                        "data": {
-                                            "type": "object"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "احراز هویت نامعتبر است.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "ERROR"
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "احراز هویت کاربر نامعتبر است."
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
                     "422": {
-                        "description": "کد OTP نامعتبر است یا منقضی شده است.",
+                        "description": "کد OTP نامعتبر یا منقضی شده است",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -2096,179 +2121,8 @@
                             }
                         }
                     },
-                    "500": {
-                        "description": "مشکلی در ایجاد توکن به وجود آمده است.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "ERROR"
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "مشکلی در ایجاد توکن به وجود آمده است."
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            }
-        },
-        "/v1/profile/set-password": {
-            "post": {
-                "tags": [
-                    "پروفایل"
-                ],
-                "summary": "تنظیم رمز عبور",
-                "description": "این متد برای تنظیم یا تغییر رمز عبور کاربر استفاده می‌شود. در صورت وجود رمز عبور قبلی، کاربر باید آن را وارد کند.",
-                "operationId": "cb41d6ad87a64d2946b202ce47ecced1",
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "properties": {
-                                    "password": {
-                                        "description": "رمز عبور جدید",
-                                        "type": "string",
-                                        "example": "NewPassword@123"
-                                    },
-                                    "password_confirmation": {
-                                        "description": "تأیید رمز عبور جدید",
-                                        "type": "string",
-                                        "example": "NewPassword@123"
-                                    },
-                                    "old_password": {
-                                        "description": "رمز عبور قبلی (در صورت داشتن رمز عبور)",
-                                        "type": "string",
-                                        "example": "OldPassword@123"
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "رمز عبور با موفقیت ایجاد شد.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "OK"
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "رمز عبور با موفقیت ایجاد شد."
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "خطاهای اعتبارسنجی رخ داده است.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "ERROR"
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "خطاهای اعتبارسنجی رخ داده است."
-                                        },
-                                        "data": {
-                                            "type": "object",
-                                            "additionalProperties": {
-                                                "type": "array",
-                                                "items": {
-                                                    "type": "string"
-                                                },
-                                                "property": null
-                                            }
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "رمز عبور فعلی نادرست است.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "ERROR"
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "رمز عبور فعلی نادرست است."
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            }
-        },
-        "/v1/profile/delete-avatar": {
-            "delete": {
-                "tags": [
-                    "پروفایل"
-                ],
-                "summary": "حذف عکس پروفایل",
-                "description": "این متد برای حذف عکس پروفایل کاربر استفاده می‌شود. در صورت حذف موفق، عکس پیش‌فرض جایگزین می‌شود.",
-                "operationId": "ef7060dcd7a5566a36ff0e2fd467e865",
-                "responses": {
-                    "200": {
-                        "description": "عکس پروفایل با موفقیت حذف شد.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "OK"
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "عکس پروفایل حذف شد و عکس پیش‌فرض جایگزین شد."
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
                     "404": {
-                        "description": "عکس پروفایل پیدا نشد.",
+                        "description": "کاربر یافت نشد",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -2279,27 +2133,7 @@
                                         },
                                         "message": {
                                             "type": "string",
-                                            "example": "عکس پروفایل پیدا نشد."
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "خطا در حذف عکس پروفایل.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "ERROR"
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "خطا در حذف عکس پروفایل."
+                                            "example": "کاربر یافت نشد."
                                         }
                                     },
                                     "type": "object"
@@ -2307,12 +2141,7 @@
                             }
                         }
                     }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
+                }
             }
         },
         "/api/v1/ticket/{id}": {
@@ -3055,6 +2884,14 @@
         {
             "name": "پروفایل",
             "description": "پروفایل"
+        },
+        {
+            "name": "Phone Verification",
+            "description": "Phone Verification"
+        },
+        {
+            "name": "Phone Update",
+            "description": "Phone Update"
         },
         {
             "name": "Tickets",

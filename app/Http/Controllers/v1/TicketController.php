@@ -24,11 +24,13 @@ class TicketController extends Controller
             'title' => 'required|string|max:255',
             'priority' => 'required|in:low,medium,high',
             'description' => 'required|string',
-            'attachments.*' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048' // محدودیت‌های فایل برای چند فایل
+            'attachments' => 'nullable|array|max:3', // حداکثر ۳ فایل مجاز
+            'attachments.*' => 'file|mimes:jpg,jpeg,png,pdf|max:2048' // هر فایل می‌تواند jpg، jpeg، png یا pdf باشد
         ]);
 
         if ($validator->fails()) {
-            return response()->json(new BaseDto(BaseDtoStatusEnum::ERROR, data: $validator->errors()), 422);
+            return response()->json(new BaseDto(BaseDtoStatusEnum::ERROR, 'فیلدها به درستی پر نشده.',
+                data: $validator->errors()), 422);
         }
 
         // ایجاد تیکت جدید
@@ -40,7 +42,28 @@ class TicketController extends Controller
             'status' => 'open',
         ]);
 
-        // ذخیره description تیکت به عنوان اولین پیام در جدول messages
+        // ذخیره‌سازی فایل‌ها و ساختن URL‌های ضمیمه
+        $attachmentUrls = [];
+        if ($request->has('attachments')) {
+            foreach ($request->file('attachments') as $file) {
+                $imageName = time() . '.' . $file->extension();
+                $tempPath = 'attachments/' . $imageName;
+
+                // انتقال فایل به مسیر موقت
+                $file->move(public_path('attachments'), $imageName);
+
+                // ایجاد رکورد در جدول ticket_attachments
+                $attachment = TicketAttachment::query()->create([
+                    'path' => $tempPath,
+                    'ticket_id' => $ticket->id
+                ]);
+
+                // ذخیره URL کامل در آرایه
+                $attachmentUrls[] = url($attachment->path);
+            }
+        }
+
+        // ذخیره description به عنوان اولین پیام در جدول messages (بدون ضمیمه‌ها)
         Message::query()->create([
             'ticket_id' => $ticket->id,
             'creator_id' => auth()->id(),
@@ -48,33 +71,15 @@ class TicketController extends Controller
             'is_read' => false,
         ]);
 
-        // بررسی تعداد پیوست‌ها قبل از ذخیره
-        $attachmentCount = TicketAttachment::query()->where('ticket_id', $ticket->id)->count();
-        if ($attachmentCount + count($request->file('attachments', [])) > 5) {
-            return response()->json(new BaseDto(BaseDtoStatusEnum::ERROR, data: ['attachments' => 'حداکثر ۵ پیوست مجاز است.']), 422);
-        }
-
-        // ذخیره‌سازی فایل‌ها در جدول ticket_attachments
-        $attachmentUrls = []; // آرایه‌ای برای ذخیره URL های پیوست‌ها
-
-        if ($request->hasFile('attachments')) {
-            foreach ($request->file('attachments') as $file) {
-                // انتقال فایل به جدول ticket_attachments
-                $attachment = TicketAttachment::query()->create([
-                    'path' => $file->store('attachments'),
-                    'ticket_id' => $ticket->id
-                ]);
-
-                // ذخیره URL کامل
-                $attachmentUrls[] = url($attachment->path);
-            }
-        }
-
-        // به‌روزرسانی تیکت با URL پیوست‌ها (در صورت وجود)
-        $ticket->attachment_urls = $attachmentUrls; // ذخیره URLs به صورت آرایه
-        $ticket->save();
-
-        return response()->json(new BaseDto(BaseDtoStatusEnum::OK, data: $ticket), 201);
+        // بازگرداندن تیکت به همراه لینک‌های ضمیمه در پاسخ نهایی
+        return response()->json(new BaseDto(
+            BaseDtoStatusEnum::OK,
+            'تیکت با موفقیت ایجاد شد.',
+            [
+                'ticket' => $ticket,
+                'attachments' => $attachmentUrls // ارسال لینک ضمیمه‌ها در پاسخ
+            ]
+        ), 201);
     }
     /**
      * @OA\Post(
@@ -187,7 +192,7 @@ class TicketController extends Controller
      */
     public function ticket($id)
     {
-        $ticket = Ticket::with('messages')->find($id); // دریافت تیکت همراه با پیام‌ها
+        $ticket = Ticket::with('messages')->find($id);
 
         if (!$ticket) {
             return response()->json(new BaseDto(
@@ -199,17 +204,29 @@ class TicketController extends Controller
         $user = auth()->user();
 
         // بررسی دسترسی کاربر به تیکت
-        if ($user->id !== $ticket->creator_id) {
+        if ($user->role !== 'admin' && $ticket->creator_id !== $user->id) {
             return response()->json(new BaseDto(
                 BaseDtoStatusEnum::ERROR,
                 'شما دسترسی به این تیکت را ندارید.'
             ), 403);
         }
+
+        $attachments = TicketAttachment::query()
+            ->where('ticket_id', $id)
+            ->select('path')
+            ->get()
+            ->pluck('path') // فقط مسیرهای پیوست‌ها را برمی‌گرداند
+            ->map(function ($path) {
+                return url($path); // تبدیل به URL کامل
+            })
+            ->toArray(); // تبدیل به آرایه
+
         // ساختار پاسخ
         $responseData = [
             'ticket_id' => $ticket->id,
             'title' => $ticket->title,
             'priority' => $ticket->priority,
+            'attachments' => $attachments, // آرایه‌ای از URL پیوست‌ها
             'status' => $ticket->status,
             'creator_id' => $ticket->creator_id,
             'created_at' => $ticket->created_at->format('Y-m-d H:i'),
@@ -420,7 +437,7 @@ class TicketController extends Controller
             'is_read' => false,
         ]);
 
-        TicketEvent::dispatch($message, $user);
+//        TicketEvent::dispatch($message, $user);
 
         // ساختن داده‌های ریسپانس
         $response = [
@@ -490,9 +507,11 @@ class TicketController extends Controller
         // دریافت پیام‌ها به همراه نقش نویسنده
         $messages = Message::query()
             ->where('ticket_id', $ticketId)
-            ->with(['creator' => function($query) {
-                $query->select('id', 'role');
-            }])
+            ->with([
+                'creator' => function ($query) {
+                    $query->select('id', 'role');
+                }
+            ])
             ->orderBy('created_at', 'asc')
             ->get()
             ->map(function ($message) {
@@ -507,7 +526,7 @@ class TicketController extends Controller
                     'author' => [
                         'name' => $message->user ? $message->user->name : null,
                         'avatar' => $message->user && $message->user->avatar ? asset($message->user->avatar) : null
-                    ],
+                    ]
                 ];
             });
 

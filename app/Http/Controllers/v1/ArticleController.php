@@ -9,9 +9,11 @@ use App\Models\Article;
 use App\Models\Image;
 use App\Models\TemporaryImage;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Log;
 use Mews\Purifier\Facades\Purifier;
 
 class ArticleController extends Controller
@@ -78,7 +80,7 @@ class ArticleController extends Controller
         if ($validator->fails()) {
             return response()->json(new BaseDto(
                 BaseDtoStatusEnum::ERROR,
-                'خطاهای اعتبارسنجی رخ داده است.',
+                'فیلدها به درستی پر نشده.',
                 $validator->errors()->toArray()
             ), 400);
         }
@@ -174,15 +176,23 @@ class ArticleController extends Controller
      * )
      * @throws ValidationException
      */
-    public function update(Request $request, $articleId)
+    public function edit(Request $request, $articleId)
     {
+        // بررسی ورودی‌ها
+        Log::info($request->all()); // چاپ ورودی‌ها برای دیباگ
+
         // اعتبارسنجی ورودی‌ها
-        $validator = $this->validateArticle($request);
+        $validator = Validator::make($request->all(), [
+            'title' => 'required|string|max:255',
+            'description' => 'required|string',
+            'category_id' => 'required|exists:categories,id',
+            'cover_image' => 'nullable|image|max:2048',
+        ]);
 
         if ($validator->fails()) {
             return response()->json(new BaseDto(
                 BaseDtoStatusEnum::ERROR,
-                'خطاهای اعتبارسنجی رخ داده است.',
+                'فیلدها به درستی پر نشده.',
                 $validator->errors()->toArray()
             ), 400);
         }
@@ -192,35 +202,51 @@ class ArticleController extends Controller
         // پاکسازی محتوای توضیحات مقاله
         $validatedData['description'] = Purifier::clean($validatedData['description'], function ($config) {
             $config->set('HTML.SafeIframe', true);
-            $config->set('HTML.Allowed', 'p,b,strong,i,a[href],img[src|alt|width|height]'); // تگ‌های مجاز
+            $config->set('HTML.Allowed', 'p,b,strong,i,a[href],img[src|alt|width|height]');
             return $config;
         });
 
-        // پیدا کردن مقاله
-        $article = Article::query()->findOrFail($articleId);
+        // پیدا کردن مقاله و اطمینان از دسترسی کاربر
+        $article = Article::query()->where('id', $articleId)
+            ->where('user_id', auth()->id())
+            ->firstOrFail();
+
+        // به‌روزرسانی اطلاعات مقاله
         $article->update([
             'title' => $validatedData['title'],
             'description' => $validatedData['description'],
             'category_id' => $validatedData['category_id'],
-            'has_photo' => $validatedData['has_photo'] ?? false,
         ]);
 
-        // بررسی آپلود عکس کاور جدید
+        // بررسی و آپلود عکس کاور جدید در صورت وجود
         if ($request->hasFile('cover_image')) {
+            // حذف عکس قبلی اگر وجود داشته باشد
+            if ($article->image_id) {
+                $oldImage = Image::query()->find($article->image_id);
+                if ($oldImage) {
+                    $oldImagePath = public_path($oldImage->path);
+                    if (file_exists($oldImagePath)) {
+                        unlink($oldImagePath);
+                    }
+                    $oldImage->delete();
+                }
+            }
+
+            // ذخیره عکس جدید در مسیر public/attachments
             $coverImage = $request->file('cover_image');
+            $imageName = uniqid() . '.' . $coverImage->extension();
+            $destinationPath = public_path('images');
+            $coverImage->move($destinationPath, $imageName);
 
-            // ذخیره عکس در پوشه‌ای مشخص و دریافت مسیر آن
-            $path = $coverImage->store('images/covers', 'public');
-
-            // ذخیره عکس در جدول images و تنظیم نوع آن به cover
-            $finalImage = Image::query()->create([
-                'path' => $path,
+            // ایجاد رکورد جدید در جدول Image
+            $newImage = Image::query()->create([
+                'path' => 'images/' . $imageName,
                 'type' => 'cover',
-                // فیلدهای اضافی در صورت نیاز
+                'user_id' => auth()->id(),
             ]);
 
-            // به‌روزرسانی فیلد image_id در جدول articles
-            $article->update(['image_id' => $finalImage->id]);
+            // به‌روزرسانی شناسه عکس کاور در جدول Article
+            $article->update(['image_id' => $newImage->id]);
         }
 
         return response()->json(new BaseDto(
@@ -700,5 +726,79 @@ class ArticleController extends Controller
             'message' => 'مقالات کاربر با موفقیت بارگذاری شد.',
             'data' => $formattedArticles,
         ]);
+    }
+    public function update(Request $request, $id)
+    {
+        \Log::info('Request data:', $request->all());
+        \Log::info('Files:', $request->file());
+
+        // اعتبارسنجی ورودی‌ها
+        $validator = Validator::make($request->all(), [
+            'title' => 'required|string',
+            'description' => 'required|string',
+            'category_id' => 'required|integer',
+            'cover_image' => 'nullable|file|mimes:jpg,jpeg,png|max:2048',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(new BaseDto(
+                BaseDtoStatusEnum::ERROR,
+                'فیلدها به درستی پر نشده.',
+                $validator->errors()->toArray()
+            ), 400);
+        }
+
+        // پاکسازی کدهای HTML در توضیحات
+        $validatedData = $validator->validated();
+        $validatedData['description'] = Purifier::clean($validatedData['description'], function($config) {
+            $config->set('HTML.SafeIframe', true);
+            $config->set('HTML.Allowed', 'p,b,strong,i,a[href],img[src|alt|width|height]');
+            return $config;
+        });
+
+        // پیدا کردن مقاله با شناسه
+        $article = Article::query()->findOrFail($id);
+
+        // بررسی و آپلود کاور جدید در جدول temporary_images اگر وجود دارد
+        if ($request->hasFile('cover_image') && $request->file('cover_image')->isValid()) {
+            $coverImageFile = $request->file('cover_image');
+            $imageName = time() . '.' . $coverImageFile->extension();
+
+            // ذخیره فایل در مسیر موقت
+            $coverImageFile->move(public_path('images'), $imageName);
+            $tempImagePath = "images/$imageName";
+
+            // ایجاد رکورد در جدول temporary_images
+            $tempImage = TemporaryImage::query()->create([
+                'path' => $tempImagePath,
+                'user_id' => auth()->id(),
+            ]);
+
+            // انتقال عکس کاور به جدول images
+            $finalImage = Image::query()->create([
+                'path' => $tempImage->path,
+                'type' => 'cover',
+                'user_id' => auth()->id(),
+            ]);
+
+            // به‌روزرسانی مقاله با image_id
+            $article->update(['image_id' => $finalImage->id]);
+
+            // حذف عکس از جدول temporary_images
+            $tempImage->delete();
+        }
+
+        // به‌روزرسانی دیگر فیلدهای مقاله
+        $article->update([
+            'title' => $validatedData['title'],
+            'description' => $validatedData['description'],
+            'category_id' => $validatedData['category_id'],
+        ]);
+
+        return response()->json(new BaseDto(
+            BaseDtoStatusEnum::OK,
+            'مقاله با موفقیت به‌روزرسانی شد.',
+            $article
+        ), 200);
     }
 }

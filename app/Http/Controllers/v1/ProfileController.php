@@ -20,113 +20,567 @@ use Tymon\JWTAuth\Facades\JWTAuth;
 class ProfileController extends Controller
 {
     /**
-     * @OA\Get(
-     *     path="/v1/profile",
-     *     summary="نمایش پروفایل کاربر",
-     *     description="این متد اطلاعات پروفایل کاربر شامل نام، شماره تلفن و عکس پروفایل را نمایش می‌دهد. اگر کاربر عکس پروفایل نداشته باشد، آواتار پیش‌فرض از جدول تصاویر بازیابی و نمایش داده می‌شود.",
+     * @OA\Post (
+     *     path="/api/v1/update-name",
+     *     summary="بروزرسانی نام کاربر",
+     *     description="این api نام کاربر را بروزرسانی میکند",
      *     tags={"پروفایل"},
-     *     security={{"bearerAuth":{}}},
-     *     @OA\Response(
-     *         response=200,
-     *         description="اطلاعات پروفایل با موفقیت بازیابی شد.",
+     *     security={{"bearerAuth": {}}},
+     *     @OA\RequestBody(
+     *         required=true,
      *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="OK"),
-     *             @OA\Property(property="message", type="string", example="پروفایل کاربر بازیابی شد."),
-     *             @OA\Property(
-     *                 property="data",
-     *                 type="object",
-     *                 @OA\Property(property="name", type="string", example="علی احمدی"),
-     *                 @OA\Property(property="phone", type="string", example="09123456789"),
-     *                 @OA\Property(property="avatar", type="string", nullable=true, example="https://your-domain.com/images/default.png")
-     *             )
+     *             required={"name"},
+     *             @OA\Property(property="name", type="string", example="John Doe", description="New name for the user")
      *         )
      *     ),
      *     @OA\Response(
-     *         response=401,
-     *         description="احراز هویت ناموفق بود.",
+     *         response=200,
+     *         description="Name updated successfully",
      *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="ERROR"),
-     *             @OA\Property(property="message", type="string", example="توکن نامعتبر است.")
+     *             @OA\Property(property="message", type="string", example="Name updated successfully.")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="Validation error",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="The given data was invalid."),
+     *             @OA\Property(
+     *                 property="errors",
+     *                 type="object",
+     *                 @OA\Property(
+     *                     property="name",
+     *                     type="array",
+     *                     @OA\Items(type="string", example="The name field is required.")
+     *                 )
+     *             )
      *         )
      *     )
      * )
      */
+    public function updateName(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+        ], [
+            'name.required' => 'نام نباید خالی باشد.',
+            'name.string' => 'نام باید معتبر باشد.',
+            'name.max' => 'نام نباید بیشتر از 255 کاراکتر باشد.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(new BaseDto(
+                BaseDtoStatusEnum::ERROR,
+                'خطاهای اعتبارسنجی نام رخ داده است.',
+                $validator->errors()->toArray()
+            ), 400);
+        }
+
+        $user = auth()->user();
+        $user->name = $request->name;
+        $user->save();
+
+        return response()->json(new BaseDto(
+            BaseDtoStatusEnum::OK,
+            'نام با موفقیت به‌روزرسانی شد.',
+            ['name' => $user->name]
+        ), 200);
+    }
+    /**
+     * @OA\Post(
+     *     path="/api/v1/old/phone",
+     *     summary="ارسال کد OTP به شماره تلفن قدیمی",
+     *     tags={"Phone Verification"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"phone"},
+     *             @OA\Property(property="phone", type="string", example="09123456789", description="شماره تلفن کاربر که باید با 09 شروع شود و 11 رقم باشد")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="کد OTP ارسال شد",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="OK"),
+     *             @OA\Property(property="message", type="string", example="کد ارسال شد."),
+     *             @OA\Property(property="data", type="object",
+     *                 @OA\Property(property="phone", type="string", example="09123456789"),
+     *                 @OA\Property(property="otp_ttl", type="integer", example=120)
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="خطاهای اعتبارسنجی شماره تلفن",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="ERROR"),
+     *             @OA\Property(property="message", type="string", example="خطاهای اعتبارسنجی شماره تلفن رخ داده است."),
+     *             @OA\Property(property="errors", type="object")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=429,
+     *         description="درخواست بیش از حد",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="ERROR"),
+     *             @OA\Property(property="message", type="string", example="تا {remainingSeconds} ثانیه دیگر نمی‌توانید درخواست جدید بدهید."),
+     *             @OA\Property(property="data", type="object",
+     *                 @OA\Property(property="otp_ttl", type="integer", example=60)
+     *             )
+     *         )
+     *     )
+     * )
+     */
+    public function oldPhone(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'phone' => 'required|regex:/^09[0-9]{9}$/|digits:11',
+        ], [
+            'phone.required' => 'شماره تلفن نباید خالی باشد.',
+            'phone.regex' => 'شماره تلفن باید با 09 شروع شود و 11 رقم باشد.',
+            'phone.digits' => 'شماره تلفن باید دقیقاً 11 رقم باشد.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(new BaseDto(
+                BaseDtoStatusEnum::ERROR,
+                'خطاهای اعتبارسنجی شماره تلفن رخ داده است.',
+                $validator->errors()->toArray()
+            ), 400);
+        }
+        $otpValidityDuration = 120; // اعتبار OTP به ثانیه
+        $lastOtp = Otp::query()->where('phone', $request->phone)->orderBy('created_at', 'desc')->first();
+
+        // اگر آخرین OTP وجود دارد
+        if ($lastOtp) {
+            $timeSinceLastOtp = now()->timestamp - $lastOtp->created_at->timestamp;
+
+            if ($timeSinceLastOtp < $otpValidityDuration) {
+                $remainingSeconds = $otpValidityDuration - $timeSinceLastOtp;
+
+                return response()->json(new BaseDto(
+                    BaseDtoStatusEnum::ERROR,
+                    "تا {$remainingSeconds} ثانیه دیگر نمی‌توانید درخواست جدید بدهید.",
+                    data: [
+                        'otp_ttl' => $remainingSeconds,
+//                            'has_account' => (bool)$user,
+                    ],
+                ), 429); // کد وضعیت 429 برای Too Many Requests
+            }
+        }
+
+        // تولید و ذخیره OTP
+        $otp = rand(1000, 9999);
+        Otp::query()->create([
+            'phone' => $request->phone,
+            'otp' => $otp,
+            'type' => 'old',
+        ]);
+
+        // ارسال OTP به کاربر
+        $this->sendOtp($request->phone, $otp);
+
+        // پیامی برای ارسال OTP جدید
+        $message = $lastOtp ? 'کد جدید ارسال شد.' : 'کد ارسال شد.';
+
+        return response()->json(new BaseDto(
+            BaseDtoStatusEnum::OK,
+            $message,
+            data: [
+                'phone' => $request->phone,
+                'otp_ttl' => $otpValidityDuration,
+            ]
+        ), 200);
+    }
+    /**
+     * @OA\Post(
+     *     path="/api/v1/old/phone/verify",
+     *     summary="تأیید شماره تلفن قدیمی با استفاده از OTP",
+     *     tags={"Phone Verification"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"phone", "otp"},
+     *             @OA\Property(property="phone", type="string", example="09123456789", description="شماره تلفن کاربر"),
+     *             @OA\Property(property="otp", type="string", example="1234", description="کد OTP دریافت شده")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="کد تایید شد",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="OK"),
+     *             @OA\Property(property="message", type="string", example="کد تایید شد.")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="کد OTP نامعتبر یا منقضی شده است",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="ERROR"),
+     *             @OA\Property(property="message", type="string", example="کد OTP نامعتبر است یا منقضی شده است.")
+     *         )
+     *     )
+     * )
+     */
+    public function verifyOldPhone(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'phone' => 'required|regex:/^09[0-9]{9}$/|digits:11',
+            'otp' => 'required|digits:4',
+        ], [
+            'phone.required' => 'شماره تلفن نباید خالی باشد.',
+            'phone.regex' => 'شماره تلفن باید با 09 شروع شود و 11 رقم باشد.',
+            'phone.digits' => 'شماره تلفن باید دقیقاً 11 رقم باشد.',
+            'otp.required' => 'کد یکبار مصرف را وارد کنید.',
+            'otp.digits' => 'کد یکبار مصرف باید 4 رقم باشد.'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(new BaseDto(
+                BaseDtoStatusEnum::ERROR,
+                'خطاهای اعتبارسنجی رخ داده است.',
+                $validator->errors()->toArray()
+            ), 400);
+        }
+        $otpRecord = Otp::query()
+            ->where('phone', $request->phone)
+            ->where('otp', $request->otp)
+            ->where('created_at', '>=', now()->subMinutes(2))
+            ->first();
+
+        if (!$otpRecord) {
+            return response()->json(new BaseDto(
+                BaseDtoStatusEnum::ERROR,
+                'کد OTP نامعتبر است یا منقضی شده است.'
+            ), 422);
+        }
+    }
+    /**
+     * @OA\Post(
+     *     path="/api/v1/update/phone",
+     *     summary="درخواست تغییر شماره تلفن",
+     *     tags={"Phone Update"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"phone"},
+     *             @OA\Property(property="phone", type="string", example="09123456789", description="شماره جدید کاربر")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="کد OTP به شماره جدید ارسال شد",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="OK"),
+     *             @OA\Property(property="message", type="string", example="کد جدید ارسال شد."),
+     *             @OA\Property(property="data", type="object",
+     *                 @OA\Property(property="phone", type="string", example="09123456789"),
+     *                 @OA\Property(property="otp_ttl", type="integer", example=120)
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="خطاهای اعتبارسنجی شماره تلفن",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="ERROR"),
+     *             @OA\Property(property="message", type="string", example="خطاهای اعتبارسنجی شماره تلفن رخ داده است."),
+     *             @OA\Property(property="errors", type="object")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=429,
+     *         description="درخواست بیش از حد",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="ERROR"),
+     *             @OA\Property(property="message", type="string", example="تا {remainingSeconds} ثانیه دیگر نمی‌توانید درخواست جدید بدهید."),
+     *             @OA\Property(property="data", type="object",
+     *                 @OA\Property(property="otp_ttl", type="integer", example=60)
+     *             )
+     *         )
+     *     )
+     * )
+     */
+    public function updatePhone(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'phone' => 'required|regex:/^09[0-9]{9}$/|digits:11',
+        ], [
+            'phone.required' => 'شماره تلفن نباید خالی باشد.',
+            'phone.regex' => 'شماره تلفن باید با 09 شروع شود و 11 رقم باشد.',
+            'phone.digits' => 'شماره تلفن باید دقیقاً 11 رقم باشد.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(new BaseDto(
+                BaseDtoStatusEnum::ERROR,
+                'خطاهای اعتبارسنجی شماره تلفن رخ داده است.',
+                $validator->errors()->toArray()
+            ), 400);
+        }
+
+        $user = auth()->user();
+
+        if ($request->phone !== $user->phone) {
+            // بررسی اینکه شماره وارد شده قبلاً توسط کاربر دیگری استفاده شده است
+            $existingUser = User::query()->where('phone', $request->phone)->first();
+            if ($existingUser) {
+                return response()->json(new BaseDto(
+                    BaseDtoStatusEnum::ERROR,
+                    'این شماره تلفن قبلاً توسط کاربر دیگری استفاده شده است.'
+                ), 409);
+            }
+
+            $otpValidityDuration = 120; // اعتبار OTP به ثانیه
+            $lastOtp = Otp::query()->where('phone', $request->phone)->orderBy('created_at', 'desc')->first();
+
+            // اگر آخرین OTP وجود دارد
+            if ($lastOtp) {
+                $timeSinceLastOtp = now()->timestamp - $lastOtp->created_at->timestamp;
+
+                if ($timeSinceLastOtp < $otpValidityDuration) {
+                    $remainingSeconds = $otpValidityDuration - $timeSinceLastOtp;
+
+                    return response()->json(new BaseDto(
+                        BaseDtoStatusEnum::ERROR,
+                        "تا {$remainingSeconds} ثانیه دیگر نمی‌توانید درخواست جدید بدهید.",
+                        data: [
+                            'otp_ttl' => $remainingSeconds,
+//                            'has_account' => (bool)$user,
+                            'has_password' => $user ? $user->has_password : false,
+                        ],
+                    ), 429); // کد وضعیت 429 برای Too Many Requests
+                }
+            }
+
+            // تولید و ذخیره OTP
+            $otp = rand(1000, 9999);
+            Otp::query()->create([
+                'phone' => $request->phone,
+                'otp' => $otp,
+                'type' => 'update',
+            ]);
+
+            // ارسال OTP به کاربر
+            $this->sendOtp($request->phone, $otp);
+
+            // پیامی برای ارسال OTP جدید
+            $message = $lastOtp ? 'کد جدید ارسال شد.' : 'کد ارسال شد.';
+
+            return response()->json(new BaseDto(
+                BaseDtoStatusEnum::OK,
+                $message,
+                data: [
+                    'phone' => $request->phone,
+                    'otp_ttl' => $otpValidityDuration,
+//                    'has_account' => (bool)$user,
+                    'has_password' => $user ? $user->has_password : false,
+                ]
+            ), 200);
+        }
+
+        return response()->json(new BaseDto(
+            BaseDtoStatusEnum::ERROR,
+            'شماره جدید باید با شماره فعلی تفاوت داشته باشد.'
+        ), 409);
+    }
+    /**
+     * @OA\Post(
+     *     path="/api/v1/update/phone/verify",
+     *     summary="تأیید شماره تلفن جدید با استفاده از OTP",
+     *     tags={"Phone Update"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"phone", "otp"},
+     *             @OA\Property(property="phone", type="string", example="09123456789", description="شماره جدید کاربر"),
+     *             @OA\Property(property="otp", type="string", example="1234", description="کد OTP دریافت شده")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="شماره تلفن با موفقیت بروزرسانی شد",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="OK"),
+     *             @OA\Property(property="message", type="string", example="شماره تلفن با موفقیت بروزرسانی شد."),
+     *             @OA\Property(property="data", type="object",
+     *                 @OA\Property(property="token", type="string", example="JWT_TOKEN"),
+     *                 @OA\Property(property="user_data", type="object")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="کد OTP نامعتبر یا منقضی شده است",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="ERROR"),
+     *             @OA\Property(property="message", type="string", example="کد OTP نامعتبر است یا منقضی شده است.")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="کاربر یافت نشد",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="ERROR"),
+     *             @OA\Property(property="message", type="string", example="کاربر یافت نشد.")
+     *         )
+     *     )
+     * )
+     */
+    public function verifyNewPhoneOtp(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'phone' => 'required|regex:/^09[0-9]{9}$/|digits:11',
+            'otp' => 'required|digits:4',
+        ], [
+            'phone.required' => 'شماره تلفن نباید خالی باشد.',
+            'phone.regex' => 'شماره تلفن باید با 09 شروع شود و 11 رقم باشد.',
+            'phone.digits' => 'شماره تلفن باید دقیقاً 11 رقم باشد.',
+            'otp.required' => 'کد یکبار مصرف را وارد کنید.',
+            'otp.digits' => 'کد یکبار مصرف باید 4 رقم باشد.'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(new BaseDto(
+                BaseDtoStatusEnum::ERROR,
+                'خطاهای اعتبارسنجی رخ داده است.',
+                $validator->errors()->toArray()
+            ), 400);
+        }
+
+        $otpRecord = Otp::query()
+            ->where('phone', $request->phone)
+            ->where('otp', $request->otp)
+            ->where('created_at', '>=', now()->subMinutes(2))
+            ->first();
+
+        if (!$otpRecord) {
+            return response()->json(new BaseDto(
+                BaseDtoStatusEnum::ERROR,
+                'کد OTP نامعتبر است یا منقضی شده است.'
+            ), 422);
+        }
+
+        // دریافت کاربر فعلی از طریق احراز هویت
+        $user = auth()->user();
+
+        if ($user) {
+            // بروزرسانی شماره تلفن و وضعیت حساب کاربری
+            $user->update([
+                'phone' => $request->phone,
+                'has_account' => true,
+                'has_password' => false,
+            ]);
+
+            $otpRecord->delete(); // حذف OTP پس از استفاده موفق
+
+            try {
+                $token = JWTAuth::fromUser($user);
+            } catch (JWTException $e) {
+                return response()->json(new BaseDto(
+                    BaseDtoStatusEnum::ERROR,
+                    'مشکلی در ایجاد توکن به وجود آمده است. لطفا دوباره تلاش کنید.'
+                ), 500);
+            }
+
+            return response()->json(new BaseDto(
+                BaseDtoStatusEnum::OK,
+                'شماره تلفن با موفقیت بروزرسانی شد.',
+                [
+                    'token' => $token,
+                    'user_data' => $user, // ارسال اطلاعات کاربر
+                ]
+            ), 200);
+        }
+    }
+
+
+    public function updatePassword(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'current_password' => 'required|string',
+            'new_password' => 'required|string|min:8|confirmed|regex:/[a-z]/|regex:/[A-Z]/|regex:/[0-9]/|regex:/[@$!%*?&]/',
+        ], [
+            'current_password.required' => 'وارد کردن رمز فعلی الزامی است.',
+            'new_password.required' => 'وارد کردن رمز جدید الزامی است.',
+            'new_password.min' => 'رمز جدید نباید کمتر از 8 کاراکتر باشد.',
+            'new_password.confirmed' => 'تایید رمز عبور جدید با رمز عبور مطابقت ندارد.',
+            'new_password.regex' => 'رمز جدید باید شامل حروف بزرگ، حروف کوچک، اعداد و نمادها باشد.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(new BaseDto(
+                BaseDtoStatusEnum::ERROR,
+                'خطاهای اعتبارسنجی رمز عبور رخ داده است.',
+                $validator->errors()->toArray()
+            ), 400);
+        }
+
+        $user = auth()->user();
+
+        // بررسی رمز فعلی
+        if (!Hash::check($request->current_password, $user->password)) {
+            \Log::info('Entered password: ' . $request->current_password);
+            \Log::info('Stored password: ' . $user->password);
+            return response()->json(new BaseDto(
+                BaseDtoStatusEnum::ERROR,
+                'رمز فعلی نادرست است.'
+            ), 400);
+        }
+
+
+        // به‌روزرسانی رمز عبور
+        $user->password = Hash::make($request->new_password);
+        $user->save();
+
+        $passwordLength = strlen($request->new_password);
+
+        // خارج کردن کاربر از سیستم (در صورت تمایل)
+        // Auth::logout();
+
+        return response()->json(new BaseDto(
+            BaseDtoStatusEnum::OK,
+            'رمز عبور با موفقیت به‌روزرسانی شد.',
+            data: [
+                'password_length' => $passwordLength // اضافه کردن طول رمز عبور به پاسخ
+            ]
+        ), 200);
+    }
     public function index()
     {
         $user = auth()->user();
 
-        // اگر کاربر عکس پروفایل ندارد از آواتار پیش‌فرض استفاده می‌کنیم
-        if (!$user->has_avatar) {
-            $defaultAvatar = Image::query()->where('type', 'default_avatar')->first();
-            $avatarUrl = $defaultAvatar ? asset('images/' . $defaultAvatar->path) : null;
-        } else {
+        // بررسی اینکه آیا کاربر عکس پروفایل دارد
+        $avatarUrl = null; // مقداردهی اولیه به URL عکس پروفایل
+
+        if ($user->has_avatar) {
             $avatar = Image::query()->find($user->image_id);
             $avatarUrl = $avatar ? asset('images/' . $avatar->path) : null;
         }
+
+        // بررسی اینکه کاربر رمز عبور دارد یا نه
+        $hasPassword = !is_null($user->password);
+
+        // طول رمز عبور از مقدار ذخیره‌شده در دیتابیس
+        $passwordLength = $user->password_length ?? 0;
 
         return response()->json(new BaseDto(
             BaseDtoStatusEnum::OK,
             data: [
                 'name' => $user->name,
                 'phone' => $user->phone,
-                'avatar' => $avatarUrl,
+                'avatar' => $avatarUrl, // فقط در صورت وجود عکس، URL آن ارسال می‌شود
+                'has_password' => $hasPassword, // آیا کاربر رمز عبور دارد یا نه
+                'password_length' => $passwordLength, // طول رمز عبور
             ]
         ));
     }
-    /**
-     * @OA\Post(
-     *     path="/v1/profile/avatar",
-     *     summary="به‌روزرسانی عکس پروفایل کاربر",
-     *     description="این متد برای به‌روزرسانی عکس پروفایل کاربر استفاده می‌شود. عکس جدید باید یک فایل تصویر معتبر باشد و حجم آن نباید از 2 مگابایت بیشتر باشد. در صورت وجود عکس قبلی، آن حذف شده و عکس جدید جایگزین می‌شود. تصویر پروفایل در پوشه `images/profile_photos` ذخیره می‌شود.",
-     *     tags={"پروفایل"},
-     *     security={{"bearerAuth":{}}},
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\MediaType(
-     *             mediaType="multipart/form-data",
-     *             @OA\Schema(
-     *                 @OA\Property(property="image", type="string", format="binary", description="فایل تصویر پروفایل"),
-     *                 required={"image"}
-     *             )
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="عکس پروفایل با موفقیت به‌روزرسانی شد.",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="OK"),
-     *             @OA\Property(property="message", type="string", example="عکس با موفقیت به‌روزرسانی شد"),
-     *             @OA\Property(
-     *                 property="data",
-     *                 type="object",
-     *                 @OA\Property(property="image", type="string", example="unique_image_name.jpg"),
-     *                 @OA\Property(property="url", type="string", example="https://your-domain.com/images/profile_photos/unique_image_name.jpg")
-     *             )
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=400,
-     *         description="خطاهای اعتبارسنجی تصویر رخ داده است.",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="ERROR"),
-     *             @OA\Property(property="message", type="string", example="خطاهای اعتبارسنجی تصویر رخ داده است."),
-     *             @OA\Property(property="data", type="object")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=500,
-     *         description="خطایی در بارگذاری تصویر رخ داد.",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="ERROR"),
-     *             @OA\Property(property="message", type="string", example="خطا در بارگذاری تصویر.")
-     *         )
-     *     )
-     * )
-     */
-    public function updateAvatar(Request $request)
+    public function setAvatar(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'image' => 'required|image|max:2048',
+            'image' => 'image|mimes:jpeg,png,jpg|max:2048',
         ], [
             'image.required' => 'عکس نباید خالی باشد.',
             'image.image' => 'فایل باید یک تصویر معتبر باشد.',
@@ -195,332 +649,7 @@ class ProfileController extends Controller
             ), 500);
         }
     }
-    /**
-     * @OA\Post(
-     *     path="/v1/profile/update",
-     *     summary="به‌روزرسانی پروفایل کاربر",
-     *     description="این متد برای به‌روزرسانی اطلاعات پروفایل کاربر از جمله نام، تصویر پروفایل و شماره تلفن استفاده می‌شود. در صورت تغییر شماره تلفن، کد یکبار مصرف برای تایید ارسال خواهد شد.",
-     *     tags={"پروفایل"},
-     *     security={{"bearerAuth":{}}},
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             @OA\Property(property="name", type="string", description="نام کاربر", example="علی رضایی"),
-     *             @OA\Property(property="phone", type="string", description="شماره تلفن جدید", example="09123456789"),
-     *             @OA\Property(property="image", type="string", format="binary", description="تصویر پروفایل جدید")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="پروفایل با موفقیت به‌روزرسانی شد.",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="OK"),
-     *             @OA\Property(property="message", type="string", example="اطلاعات پروفایل با موفقیت به‌روزرسانی شد."),
-     *             @OA\Property(
-     *                 property="data",
-     *                 type="object",
-     *                 @OA\Property(property="user", type="object", description="اطلاعات کاربر")
-     *             )
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=202,
-     *         description="کد یکبار مصرف به شماره جدید ارسال شد.",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="OK"),
-     *             @OA\Property(property="message", type="string", example="کد یکبار مصرف به شماره جدید ارسال شد.")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=400,
-     *         description="خطاهای اعتبارسنجی رخ داده است یا شماره تلفن قبلاً استفاده شده است.",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="ERROR"),
-     *             @OA\Property(property="message", type="string", example="خطاهای اعتبارسنجی رخ داده است یا این شماره تلفن قبلاً توسط کاربر دیگری استفاده شده است."),
-     *             @OA\Property(property="data", type="object")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=500,
-     *         description="خطا در به‌روزرسانی اطلاعات پروفایل.",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="ERROR"),
-     *             @OA\Property(property="message", type="string", example="خطایی در به‌روزرسانی اطلاعات رخ داده است.")
-     *         )
-     *     )
-     * )
-     */
-    public function updateProfile(Request $request)
-    {
-        $user = auth()->user();
 
-        // اعتبارسنجی ورودی‌ها
-        $validator = Validator::make($request->all(), [
-            'name' => 'sometimes|string|max:255',
-            'phone' => 'sometimes|regex:/^09[0-9]{9}$/|digits:11',
-            'image' => 'sometimes|image|max:2048',
-        ], [
-            'name.string' => 'نام باید معتبر باشد.',
-            'name.max' => 'نام نباید بیشتر از 255 کاراکتر باشد.',
-            'phone.regex' => 'شماره تلفن باید با 09 شروع شود و 11 رقم باشد.',
-            'phone.digits' => 'شماره تلفن باید دقیقاً 11 رقم باشد.',
-            'image.image' => 'فایل باید یک تصویر معتبر باشد.',
-            'image.max' => 'حجم تصویر نباید بیشتر از 2 مگابایت باشد.',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(new BaseDto(
-                BaseDtoStatusEnum::ERROR,
-                'خطاهای اعتبارسنجی رخ داده است.',
-                $validator->errors()->toArray()
-            ), 400);
-        }
-
-        // به‌روزرسانی نام کاربر در صورت ارسال
-        if ($request->filled('name')) {
-            $user->name = $request->name;
-        }
-
-        // به‌روزرسانی تصویر پروفایل در صورت ارسال
-        if ($request->hasFile('image')) {
-            $profile_image = $request->file('image');
-            $imageName = time() . '.' . $profile_image->extension();
-
-            // حذف تصویر قدیمی
-            if ($user->image_id) {
-                $oldImage = Image::query()->find($user->image_id);
-                if ($oldImage) {
-                    Storage::disk('public')->delete($oldImage->path);
-                    $oldImage->delete();
-                }
-            }
-
-            // ذخیره تصویر جدید به مسیر public/images
-            $profile_image->move(public_path('images'), $imageName);
-            $path = 'images/' . $imageName;
-
-            $newImage = Image::query()->create([
-                'type' => 'avatar',
-                'path' => $path,
-                'user_id' => $user->id,
-            ]);
-
-            $user->avatar = $path;
-            $user->image_id = $newImage->id;
-            $user->has_avatar = true;
-        }
-
-        // به‌روزرسانی شماره تلفن در صورت ارسال
-        if ($request->filled('phone') && $request->phone !== $user->phone) {
-            // بررسی اینکه شماره وارد شده قبلاً توسط کاربر دیگری استفاده شده است
-            $existingUser = User::query()->where('phone', $request->phone)->first();
-            if ($existingUser) {
-                return response()->json(new BaseDto(
-                    BaseDtoStatusEnum::ERROR,
-                    'این شماره تلفن قبلاً توسط کاربر دیگری استفاده شده است.'
-                ), 400);
-            }
-
-            // تولید و ذخیره OTP
-            $otp = rand(1000, 9999);
-            Otp::query()->create([
-                'phone' => $request->phone,
-                'otp' => $otp,
-                'type' => 'phone_update',
-            ]);
-            $this->sendOtp($request->phone, $otp);
-
-            return response()->json(new BaseDto(
-                BaseDtoStatusEnum::OK,
-                'کد یکبار مصرف به شماره جدید ارسال شد..',
-            ), 202);
-        }
-
-        // ذخیره تغییرات کاربر
-        $user->save();
-
-        return response()->json(new BaseDto(
-            BaseDtoStatusEnum::OK,
-            'اطلاعات پروفایل با موفقیت به‌روزرسانی شد.',
-            ['user' => $user]
-        ), 200);
-    }
-    /**
-     * @OA\Post(
-     *     path="/v1/profile/verify-update",
-     *     summary="تأیید شماره تلفن با کد OTP",
-     *     description="این متد برای تأیید شماره تلفن کاربر با استفاده از کد یکبار مصرف (OTP) است. در صورت موفقیت، یک توکن JWT برای کاربر تولید می‌شود.",
-     *     tags={"پروفایل"},
-     *     security={{"bearerAuth":{}}},
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             @OA\Property(property="phone", type="string", description="شماره تلفن کاربر", example="09123456789"),
-     *             @OA\Property(property="otp", type="string", description="کد یکبار مصرف", example="1234")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="شماره تلفن با موفقیت بروزرسانی شد.",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="OK"),
-     *             @OA\Property(property="message", type="string", example="شماره تلفن با موفقیت بروزرسانی شد."),
-     *             @OA\Property(
-     *                 property="data",
-     *                 type="object",
-     *                 @OA\Property(property="token", type="string", description="توکن JWT کاربر"),
-     *                 @OA\Property(
-     *                     property="user_data",
-     *                     type="object",
-     *                     description="اطلاعات کاربر شامل شناسه و شماره تلفن"
-     *                 )
-     *             )
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=400,
-     *         description="خطاهای اعتبارسنجی رخ داده است.",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="ERROR"),
-     *             @OA\Property(property="message", type="string", example="خطاهای اعتبارسنجی رخ داده است."),
-     *             @OA\Property(property="data", type="object")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=401,
-     *         description="احراز هویت نامعتبر است.",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="ERROR"),
-     *             @OA\Property(property="message", type="string", example="احراز هویت کاربر نامعتبر است.")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=422,
-     *         description="کد OTP نامعتبر است یا منقضی شده است.",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="ERROR"),
-     *             @OA\Property(property="message", type="string", example="کد OTP نامعتبر است یا منقضی شده است.")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=500,
-     *         description="مشکلی در ایجاد توکن به وجود آمده است.",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="ERROR"),
-     *             @OA\Property(property="message", type="string", example="مشکلی در ایجاد توکن به وجود آمده است.")
-     *         )
-     *     )
-     * )
-     */
-    public function verifyUpdatePhoneOtp (Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'phone' => 'required|regex:/^09[0-9]{9}$/|digits:11',
-            'otp' => 'required|digits:4',
-        ], [
-            'phone.required' => 'شماره تلفن نباید خالی باشد.',
-            'phone.regex' => 'شماره تلفن باید با 09 شروث شود و 11 رقم باشد.',
-            'phone.digits' => 'شماره تلفن باید دقیقاً 11 رقم باشد.',
-            'otp.required' => 'کدیکبار مصرف را وارد کنید.',
-            'otp.digits' => 'کدیکبار مصرف باید 4 رقم باشد'
-        ]);
-        if ($validator->fails()) {
-            $errors = $validator->errors()->toArray();
-
-            return response()->json(new BaseDto(
-                BaseDtoStatusEnum::ERROR,
-                'خطاهای اعتبارسنجی رخ داده است.',
-                $errors
-            ), 400);
-        }
-
-        $otpRecord = Otp::query()
-            ->where('phone', $request->phone)
-            ->where('otp', $request->otp)
-            ->where('created_at', '>=', now()->subMinutes(2))
-            ->first();
-
-        if ($otpRecord) {
-            $user = User::query()->firstOrCreate([
-                'phone' => $request->get('phone'),
-                'has_password' => false,
-            ]);
-
-            if ($user) {
-                $defaultPhoto = Image::first();
-                if ($defaultPhoto) {
-                    $user->images()->create(['path' => $defaultPhoto->path]);
-                    $user->update(['has_avatar' => true]);
-                }
-                $user->update(['has_account' => true]);
-            }
-
-            $otpRecord->delete();
-
-            try {
-                $token = JWTAuth::fromUser($user);
-            } catch (JWTException $e) {
-                return response()->json(new BaseDto(BaseDtoStatusEnum::ERROR, 'مشکلی در ایجاد توکن به وجود آمده است.'),
-                    500);
-            }
-            // پاسخ با توکن JWT
-            return response()->json(new BaseDto(BaseDtoStatusEnum::OK,'شماره تلفن با موفقیت بروزرسانی شد.',
-               data:
-                [
-                    'token' => $token, // ارسال توکن در پاسخ
-                    'user Data' => $user, // ارسال اطلاعات کاربر در پاسخ
-                ]),200);
-        } else {
-            return response()->json(new BaseDto(BaseDtoStatusEnum::ERROR,'کد OTP نامعتبر است یا منقضی شده است.',
-            ),422);
-        }
-    }
-    /**
-     * @OA\Post(
-     *     path="/v1/profile/set-password",
-     *     summary="تنظیم رمز عبور",
-     *     description="این متد برای تنظیم یا تغییر رمز عبور کاربر استفاده می‌شود. در صورت وجود رمز عبور قبلی، کاربر باید آن را وارد کند.",
-     *     tags={"پروفایل"},
-     *     security={{"bearerAuth":{}}},
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             @OA\Property(property="password", type="string", description="رمز عبور جدید", example="NewPassword@123"),
-     *             @OA\Property(property="password_confirmation", type="string", description="تأیید رمز عبور جدید", example="NewPassword@123"),
-     *             @OA\Property(property="old_password", type="string", description="رمز عبور قبلی (در صورت داشتن رمز عبور)", example="OldPassword@123")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="رمز عبور با موفقیت ایجاد شد.",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="OK"),
-     *             @OA\Property(property="message", type="string", example="رمز عبور با موفقیت ایجاد شد.")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=400,
-     *         description="خطاهای اعتبارسنجی رخ داده است.",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="ERROR"),
-     *             @OA\Property(property="message", type="string", example="خطاهای اعتبارسنجی رخ داده است."),
-     *             @OA\Property(
-     *                 property="data",
-     *                 type="object",
-     *                 additionalProperties=@OA\Property(type="array", @OA\Items(type="string"))
-     *             )
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=401,
-     *         description="رمز عبور فعلی نادرست است.",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="ERROR"),
-     *             @OA\Property(property="message", type="string", example="رمز عبور فعلی نادرست است.")
-     *         )
-     *     )
-     * )
-     */
     public function setPassword(Request $request)
     {
         // اعتبارسنجی ورودی برای تنظیم رمز عبور
@@ -556,7 +685,7 @@ class ProfileController extends Controller
         // چک کردن رمز عبور فعلی
         if ($user->has_password && !Hash::check($request->old_password, $user->password)) {
             return response()->json(new BaseDto(BaseDtoStatusEnum::ERROR, 'رمز عبور فعلی نادرست است.'),
-                401); // تغییر کد وضعیت به 401
+                422);
         }
 
         // تنظیم رمز عبور جدید
@@ -564,42 +693,17 @@ class ProfileController extends Controller
         $user->has_password = true; // در صورتی که رمز عبور قبلاً نداشته باشد، این مقدار به true تغییر می‌کند
         $user->save();
 
-        return response()->json(new BaseDto(BaseDtoStatusEnum::OK, 'رمز عبور با موفقیت ایجاد شد.'),
-            200);
+        // محاسبه طول و تعداد کاراکترهای رمز عبور
+        $passwordLength = strlen($request->password);
+
+        return response()->json(new BaseDto(
+            BaseDtoStatusEnum::OK,
+            'رمز عبور با موفقیت ایجاد شد.',
+            data: [
+                'password_length' => $passwordLength,
+            ]
+        ), 200);
     }
-    /**
-     * @OA\Delete(
-     *     path="/v1/profile/delete-avatar",
-     *     summary="حذف عکس پروفایل",
-     *     description="این متد برای حذف عکس پروفایل کاربر استفاده می‌شود. در صورت حذف موفق، عکس پیش‌فرض جایگزین می‌شود.",
-     *     tags={"پروفایل"},
-     *     security={{"bearerAuth":{}}},
-     *     @OA\Response(
-     *         response=200,
-     *         description="عکس پروفایل با موفقیت حذف شد.",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="OK"),
-     *             @OA\Property(property="message", type="string", example="عکس پروفایل حذف شد و عکس پیش‌فرض جایگزین شد.")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=404,
-     *         description="عکس پروفایل پیدا نشد.",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="ERROR"),
-     *             @OA\Property(property="message", type="string", example="عکس پروفایل پیدا نشد.")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=500,
-     *         description="خطا در حذف عکس پروفایل.",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="ERROR"),
-     *             @OA\Property(property="message", type="string", example="خطا در حذف عکس پروفایل.")
-     *         )
-     *     )
-     * )
-     */
     public function deleteAvatar(Request $request)
     {
         // دریافت کاربر جاری
@@ -611,17 +715,19 @@ class ProfileController extends Controller
             $image = Image::query()->find($user->image_id);
 
             // حذف عکس از سیستم ذخیره‌سازی
-            if ($image && Storage::exists($image->path)) {
-                Storage::delete($image->path);
-            }
-
-            // حذف رکورد عکس از دیتابیس
             if ($image) {
+                // حذف عکس از سیستم ذخیره‌سازی
+                if (Storage::exists($image->path)) {
+                    Storage::delete($image->path);
+                }
+
+                // حذف رکورد عکس از دیتابیس
                 $image->delete();
             }
 
             // ریست کردن فیلد image_id در جدول کاربران
             $user->image_id = null; // یا مقداری که نشان‌دهنده عکس پیش‌فرض است
+            $user->has_avatar = false; // برای نشان دادن عدم وجود آواتار
             $user->save();
 
             return response()->json(new BaseDto(BaseDtoStatusEnum::OK, 'عکس پروفایل حذف شد و عکس پیش‌فرض جایگزین شد.'),
